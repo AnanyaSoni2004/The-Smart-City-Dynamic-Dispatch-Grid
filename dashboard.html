@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dynamic Dispatch Grid — Emergency Operations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0F1A; --panel:#101827; --panel2:#0C1320; --line:#1C2940;
+  --ink:#DCE6F5; --dim:#677896; --faint:#3A4A68;
+  --crit:#FF5C49; --warn:#FFB224; --ok:#46D6A0; --cyan:#4FC1E9; --violet:#9D7BFF;
+  --sev1:#46D6A0; --sev2:#9BCB5A; --sev3:#FFB224; --sev4:#FF8A3C; --sev5:#FF5C49;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font:13px/1.5 "IBM Plex Mono",monospace;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+/* ---------- header ---------- */
+header{
+  display:flex; align-items:center; gap:18px;
+  padding:10px 20px; border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#0E1525,#0A0F1A);
+  flex-wrap:wrap;
+}
+.brand{display:flex; align-items:baseline; gap:10px}
+.brand h1{
+  font:700 24px/1 "Saira Condensed",sans-serif; letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.brand h1 em{font-style:normal;color:var(--crit)}
+.brand .sub{color:var(--dim); font-size:11px; letter-spacing:.18em; text-transform:uppercase}
+.live{
+  display:inline-flex; align-items:center; gap:6px; color:var(--crit);
+  font-size:11px; letter-spacing:.2em; font-weight:600;
+}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--crit);animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.25}}
+.controls{margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+button{
+  font:600 11px "IBM Plex Mono",monospace; letter-spacing:.08em;
+  background:var(--panel); color:var(--ink); border:1px solid var(--line);
+  padding:7px 12px; cursor:pointer; border-radius:3px;
+}
+button:hover{border-color:var(--cyan); color:var(--cyan)}
+button:focus-visible{outline:2px solid var(--cyan); outline-offset:2px}
+button.danger:hover{border-color:var(--crit); color:var(--crit)}
+button[aria-pressed="true"]{border-color:var(--cyan); color:var(--cyan); background:#0F2030}
+.clock{font-weight:600; color:var(--warn); min-width:96px; text-align:right}
+/* ---------- KPI strip ---------- */
+.kpis{
+  display:grid; grid-template-columns:repeat(6,1fr);
+  border-bottom:1px solid var(--line); background:var(--panel2);
+}
+.kpi{padding:10px 18px; border-right:1px solid var(--line)}
+.kpi:last-child{border-right:none}
+.kpi .lbl{font-size:10px; letter-spacing:.16em; color:var(--dim); text-transform:uppercase}
+.kpi .val{font:700 26px/1.15 "Saira Condensed",sans-serif}
+.kpi .val small{font-size:14px;color:var(--dim)}
+.kpi.alert .val{color:var(--crit)}
+.kpi.good .val{color:var(--ok)}
+.kpi.warn .val{color:var(--warn)}
+/* ---------- main grid ---------- */
+main{flex:1; display:grid; grid-template-columns:minmax(0,1.45fr) minmax(280px,1fr); min-height:0}
+.map-wrap{position:relative; border-right:1px solid var(--line); min-height:0; display:flex}
+svg{width:100%; height:100%; display:block}
+.legend{
+  position:absolute; left:12px; bottom:10px; display:flex; gap:14px; flex-wrap:wrap;
+  font-size:10px; color:var(--dim); background:rgba(10,15,26,.8); padding:6px 10px;
+  border:1px solid var(--line); border-radius:3px;
+}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:8px;height:8px;border-radius:50%;display:inline-block}
+aside{display:flex; flex-direction:column; min-height:0}
+section{border-bottom:1px solid var(--line); padding:12px 16px; min-height:0}
+section h2{
+  font:700 13px "Saira Condensed",sans-serif; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--dim); margin-bottom:8px;
+  display:flex; justify-content:space-between; align-items:baseline;
+}
+section h2 b{color:var(--ink)}
+/* priority queue */
+.queue{flex:1.2; overflow-y:auto}
+.qrow{
+  display:grid; grid-template-columns:54px 1fr 64px; gap:8px; align-items:center;
+  padding:6px 8px; border:1px solid var(--line); border-left-width:3px;
+  margin-bottom:6px; background:var(--panel); border-radius:2px; font-size:12px;
+}
+.qrow .score{font:700 18px "Saira Condensed",sans-serif; text-align:center}
+.qrow .meta{color:var(--dim); font-size:10px}
+.qrow .eta{text-align:right; font-size:10px; color:var(--cyan)}
+.empty{color:var(--faint); font-size:11px; padding:10px 0; text-align:center}
+/* resources */
+.res{flex:.9}
+.bar{display:grid; grid-template-columns:92px 1fr 64px; gap:8px; align-items:center; margin-bottom:7px; font-size:11px}
+.bar .track{height:10px; background:#0E1626; border:1px solid var(--line); border-radius:2px; overflow:hidden; display:flex}
+.bar .busy{background:var(--crit); height:100%}
+.bar .ret{background:var(--warn); height:100%; opacity:.7}
+.bar .free{background:var(--cyan); height:100%; opacity:.85}
+.bar .n{color:var(--dim); text-align:right}
+/* log */
+.log{flex:1.1; overflow-y:auto; font-size:11px}
+.log p{padding:3px 0; border-bottom:1px dashed #15203450; color:var(--dim)}
+.log p b{color:var(--ink); font-weight:500}
+.log .t-dispatch b{color:var(--cyan)} .log .t-resolve b{color:var(--ok)}
+.log .t-new b{color:var(--warn)} .log .t-preempt b{color:var(--violet)}
+.log .t-crit b{color:var(--crit)}
+/* map pieces */
+.road{stroke:#16243C; stroke-width:1.4}
+.road.closed{stroke:var(--crit); stroke-dasharray:3 4; stroke-width:1.6; opacity:.8}
+.road.jam{stroke:#5A4214}
+.station{fill:#1B2C49; stroke:var(--cyan); stroke-width:1}
+.route{fill:none; stroke:var(--cyan); stroke-width:1.3; stroke-dasharray:4 5; opacity:.5;
+  animation:flow 1s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-9}}
+.pulse{fill:none; stroke-width:1.5; animation:pulse 1.8s ease-out infinite}
+@keyframes pulse{0%{r:5;opacity:.9}100%{r:22;opacity:0}}
+@media (prefers-reduced-motion:reduce){
+  .pulse,.route,.live i{animation:none}
+}
+@media (max-width:900px){
+  main{grid-template-columns:1fr; grid-template-rows:48vh 1fr; overflow-y:auto}
+  .map-wrap{border-right:none; border-bottom:1px solid var(--line)}
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  .kpi:nth-child(3){border-right:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>Dispatch<em>Grid</em></h1>
+    <span class="sub">City EOC · Multi-Agent Swarm</span>
+  </div>
+  <span class="live"><i></i>LIVE</span>
+  <div class="controls">
+    <button id="btnPause" aria-pressed="false">Pause</button>
+    <button id="btnSpeed" aria-pressed="false">Speed ×4</button>
+    <button id="btnSurge" class="danger">Inject surge</button>
+    <button id="btnClose" class="danger">Close a road</button>
+    <span class="clock" id="clock">T+00:00</span>
+  </div>
+</header>
+
+<div class="kpis">
+  <div class="kpi"><div class="lbl">Calls received</div><div class="val" id="kCalls">0</div></div>
+  <div class="kpi"><div class="lbl">Active incidents</div><div class="val" id="kActive">0</div></div>
+  <div class="kpi alert"><div class="lbl">Queue backlog</div><div class="val" id="kBacklog">0</div></div>
+  <div class="kpi"><div class="lbl">Duplicates merged</div><div class="val" id="kMerged">0</div></div>
+  <div class="kpi warn"><div class="lbl">Avg response</div><div class="val" id="kResp">—<small> min</small></div></div>
+  <div class="kpi good"><div class="lbl">Lives saved est.</div><div class="val" id="kLives">0</div></div>
+</div>
+
+<main>
+  <div class="map-wrap">
+    <svg id="map" viewBox="0 0 640 640" role="img" aria-label="Live city map with incidents and units"></svg>
+    <div class="legend">
+      <span><i style="background:var(--sev5)"></i>Sev 5</span>
+      <span><i style="background:var(--sev3)"></i>Sev 3</span>
+      <span><i style="background:var(--cyan)"></i>Unit</span>
+      <span><i style="background:none;border:1px solid var(--cyan);border-radius:0"></i>Station</span>
+      <span><i style="background:var(--crit);height:2px;border-radius:0;width:14px"></i>Closed road</span>
+    </div>
+  </div>
+  <aside>
+    <section class="queue">
+      <h2>Priority queue <b id="qCount">0 pending</b></h2>
+      <div id="queue"><div class="empty">No incidents waiting.</div></div>
+    </section>
+    <section class="res">
+      <h2>Fleet status</h2>
+      <div id="res"></div>
+    </section>
+    <section class="log">
+      <h2>Dispatch log</h2>
+      <div id="log"></div>
+    </section>
+  </aside>
+</main>
+
+<script>
+"use strict";
+/* ============ city graph ============ */
+const W=12,H=12,SP=52,OFF=34;
+const nodes=[],adj=new Map(),closed=new Set(),jams=new Map();
+for(let y=0;y<H;y++)for(let x=0;x<W;x++){nodes.push({x,y});adj.set(y*W+x,new Map());}
+const rng=(s=>()=> (s=Math.imul(48271,s)%2147483647)/2147483647)(2026);
+function key(a,b){return a<b?a+"-"+b:b+"-"+a}
+for(let y=0;y<H;y++)for(let x=0;x<W;x++){const n=y*W+x;
+  if(x+1<W){const m=n+1,w=45*(0.8+rng()*0.8);adj.get(n).set(m,w);adj.get(m).set(n,w);}
+  if(y+1<H){const m=n+W,w=45*(0.8+rng()*0.8);adj.get(n).set(m,w);adj.get(m).set(n,w);}}
+function edgeT(a,b){if(closed.has(key(a,b)))return null;const w=adj.get(a).get(b);return w==null?null:w*(jams.get(key(a,b))||1)}
+function px(n){return{x:OFF+(n%W)*SP,y:OFF+Math.floor(n/W)*SP}}
+function astar(src,dst){ /* A* with euclidean heuristic */
+  const h=n=>{const a=px(n),b=px(dst);return Math.hypot(a.x-b.x,a.y-b.y)/SP*30};
+  const g=new Map([[src,0]]),prev=new Map(),open=[[h(src),src]],seen=new Set();
+  while(open.length){open.sort((a,b)=>a[0]-b[0]);const[,u]=open.shift();
+    if(u===dst){const p=[dst];while(p[p.length-1]!==src)p.push(prev.get(p[p.length-1]));return{path:p.reverse(),t:g.get(dst)}}
+    if(seen.has(u))continue;seen.add(u);
+    for(const v of adj.get(u).keys()){const w=edgeT(u,v);if(w==null)continue;
+      const ng=g.get(u)+w;if(ng<(g.get(v)??1e18)){g.set(v,ng);prev.set(v,u);open.push([ng+h(v),v]);}}}
+  return{path:null,t:Infinity};
+}
+/* ============ world data ============ */
+const LANDMARKS=[["Central Mall",66],["Riverside Bridge",14],["Northgate Hospital",9],
+ ["Maple St School",100],["Harbor District",132],["City Hall",71],["Westside Chem Plant",48],
+ ["Sunrise Apartments",90],["Grand Station",77],["Oakwood Park",27],["Hwy 9 Interchange",11],
+ ["Eastbank Market",119],["Southport Stadium",127],["Kingsway Tunnel",109],["Bayside Pier",134],
+ ["Copper Tower",64],["Mercer Bus Depot",31],["Aurora Substation",7]];
+const TYPES={Fire:{c:"#FF8A3C",need:{FireTruck:1,Ambulance:1},sev:4},
+ Medical:{c:"#46D6A0",need:{Ambulance:1},sev:3},
+ Accident:{c:"#FFB224",need:{Police:1,Ambulance:1},sev:3},
+ Flood:{c:"#4FC1E9",need:{Boat:1,Police:1},sev:3},
+ Collapse:{c:"#FF5C49",need:{FireTruck:2,Ambulance:2,Police:1},sev:5},
+ Hazmat:{c:"#9D7BFF",need:{Hazmat:1,FireTruck:1,Police:1},sev:4}};
+const SEVC=["","#46D6A0","#9BCB5A","#FFB224","#FF8A3C","#FF5C49"];
+const STATIONS=[0,11,60,71,132,143,66,27];
+const FLEET={Ambulance:20,FireTruck:12,Police:25,Hazmat:4,Boat:5};
+const PHR={Fire:["huge fire","flames everywhere","smoke pouring out"],
+ Medical:["someone collapsed","person not breathing","many injured"],
+ Accident:["multi car pileup","truck flipped over","bad crash"],
+ Flood:["water rising fast","people stuck on roofs","flash flood"],
+ Collapse:["building collapsed","people traped under rubble","wall came down"],
+ Hazmat:["chemical leak","toxic fumes","tanker leaking"]};
+/* ============ state ============ */
+let units=[],incidents=new Map(),incSeq=1,t=0,speed=4,paused=false;
+let M={calls:0,merged:0,quarantined:0,dispatches:0,preempts:0,resolved:0,respSum:0,respN:0,lives:0};
+{let c={};for(const[ty,n]of Object.entries(FLEET))for(let i=1;i<=n;i++){
+  const home=STATIONS[(units.length)%STATIONS.length];
+  units.push({id:ty+"_"+i,type:ty,home,node:home,status:"available",fuel:1,inc:null,
+    route:null,prog:0,eta:0,sceneUntil:0});}}
+/* ============ call stream (triage) ============ */
+let callRate=0.10; // calls per sim-second; surge raises this
+const gtPool=[]; // active ground-truth events that spawn duplicate calls
+function spawnGT(force){
+  const[name,node]=LANDMARKS[Math.floor(Math.random()*LANDMARKS.length)];
+  const ty=Object.keys(TYPES)[Math.floor(Math.random()*6)];
+  const sev=Math.max(1,Math.min(5,TYPES[ty].sev+(Math.random()<0.3?1:0)-(Math.random()<0.25?1:0)+(force?1:0)));
+  gtPool.push({name,node,ty,sev,people:Math.max(1,Math.round(sev*6*(0.4+Math.random()*1.4))),
+    born:t,dupes:1+Math.floor(Math.random()*6)});
+}
+function triageStep(dt){
+  if(Math.random()<callRate*dt*0.35||gtPool.length===0)spawnGT(false);
+  if(Math.random()<callRate*dt){
+    M.calls++;
+    if(Math.random()<0.07){M.quarantined++; // false report -> quarantine gate
+      log("t-crit",`Quarantined low-confidence report ("not sure, my friend told me…")`);
+    }else{
+      const gt=gtPool[Math.floor(Math.random()*gtPool.length)];
+      admit(gt);
+      if(--gt.dupes<=0)gtPool.splice(gtPool.indexOf(gt),1);
+    }
+  }
+}
+function admit(gt){ // dedup: location+type+time window
+  for(const inc of incidents.values()){
+    if(inc.status==="resolved")continue;
+    if(inc.node===gt.node&&inc.ty===gt.ty&&t-inc.last<900){
+      inc.reports++;inc.last=t;inc.sev=Math.max(inc.sev,gt.sev);
+      inc.people=Math.round(inc.people*0.6+gt.people*0.4);M.merged++;return;}
+  }
+  const id="INC"+String(incSeq++).padStart(4,"0");
+  const need={};for(const[u,n]of Object.entries(TYPES[gt.ty].need))need[u]=gt.sev>=4?n*2-(n>1?1:0):n;
+  incidents.set(id,{id,ty:gt.ty,node:gt.node,name:gt.name,sev:gt.sev,people:gt.people,
+    born:t,last:t,reports:1,status:"pending",units:[],arrived:0});
+  incidents.get(id).need=need;
+  log("t-new",`<b>${id}</b> ${gt.ty} @ ${gt.name} · sev ${gt.sev} · ~${gt.people} people — "${PHR[gt.ty][Math.floor(Math.random()*3)]}!"`);
+}
+function priority(inc){
+  const lives=1+Math.sqrt(Math.max(1,inc.people));
+  const aging=1+Math.min(1,(t-inc.born)/600);
+  const cor=Math.min(1.5,0.8+0.1*inc.reports);
+  return inc.sev*lives*aging*cor;
+}
+/* ============ dispatch agent ============ */
+const RESERVE=0.12,PREEMPT=2.2;
+function pending(){return[...incidents.values()].filter(i=>i.status==="pending").sort((a,b)=>priority(b)-priority(a))}
+function tryDispatch(inc){
+  const picks=[];let pre=null;
+  for(const[ty,n]of Object.entries(inc.need)){
+    let pool=units.filter(u=>u.type===ty&&u.status==="available"&&u.fuel>0.15);
+    const reserve=Math.ceil(units.filter(u=>u.type===ty).length*RESERVE);
+    let usable=pool.length-reserve;
+    if(usable<n){ // preemption pass
+      const pNew=priority(inc);
+      const cands=units.filter(u=>u.type===ty&&u.status==="en_route"&&incidents.has(u.inc)
+        &&pNew>PREEMPT*priority(incidents.get(u.inc)));
+      pool=pool.concat(cands);usable=pool.length;
+    }
+    if(usable<n&&pool.length<n)return false; // atomic
+    pool.sort((a,b)=>astar(a.node,inc.node).t-astar(b.node,inc.node).t);
+    const got=pool.slice(0,n);
+    if(got.length<n)return false;
+    picks.push(...got);
+  }
+  let worst=0;
+  for(const u of picks){
+    if(u.inc&&u.inc!==inc.id&&incidents.has(u.inc)){const o=incidents.get(u.inc);
+      o.units=o.units.filter(x=>x!==u.id);
+      if(!o.units.length&&o.status==="dispatched")o.status="pending";
+      pre=o.id;M.preempts++;}
+    const r=astar(u.node,inc.node);if(!r.path)return false;
+    u.status="en_route";u.inc=inc.id;u.route=r.path;u.prog=0;u.eta=r.t;worst=Math.max(worst,r.t);
+    inc.units.push(u.id);
+  }
+  inc.status="dispatched";inc.dispT=t;M.dispatches++;
+  log(pre?"t-preempt":"t-dispatch",
+    `<b>${inc.id}</b> ← ${picks.map(u=>u.id).join(", ")} · ETA ${(worst/60).toFixed(1)} min${pre?` (preempted from ${pre})`:""}`);
+  return true;
+}
+/* ============ unit movement & lifecycle ============ */
+function moveUnits(dt){
+  for(const u of units){
+    if(u.status==="en_route"||u.status==="returning"){
+      u.prog+=dt;
+      // advance along route by consumed edge time
+      let acc=0,i=0;
+      while(i<u.route.length-1){const w=edgeT(u.route[i],u.route[i+1])??60;
+        if(acc+w>u.prog)break;acc+=w;i++;}
+      u.node=u.route[Math.min(i,u.route.length-1)];
+      u.segFrom=u.route[i];u.segTo=u.route[Math.min(i+1,u.route.length-1)];
+      u.segF=u.segTo===u.segFrom?0:Math.min(1,(u.prog-acc)/(edgeT(u.segFrom,u.segTo)??60));
+      if(u.prog>=u.eta){
+        if(u.status==="en_route"){
+          const inc=incidents.get(u.inc);
+          u.status="on_scene";u.fuel-=0.12;u.node=inc?inc.node:u.node;
+          u.sceneUntil=t+(inc?inc.sev*280:300);
+          if(inc&&inc.status==="dispatched"){inc.status="on_scene";
+            const rt=t-inc.born;M.respSum+=rt;M.respN++;
+            M.lives+=inc.people*Math.max(0.1,1-rt/1800)*(inc.sev/5);}
+        }else{u.node=u.home;
+          if(u.fuel<0.3){u.status="refueling";u.sceneUntil=t+600;}
+          else u.status="available";}
+      }
+    }else if(u.status==="on_scene"&&t>=u.sceneUntil){
+      const inc=incidents.get(u.inc);
+      if(inc&&inc.status==="on_scene"){inc.status="resolved";inc.gone=t+40;M.resolved++;
+        log("t-resolve",`<b>${inc.id}</b> resolved @ ${inc.name} · ${inc.units.length} units returning`);}
+      u.inc=null;const r=astar(u.node,u.home);
+      u.status="returning";u.route=r.path||[u.node];u.prog=0;u.eta=r.t||1;
+    }else if(u.status==="refueling"&&t>=u.sceneUntil){u.fuel=1;u.status="available";}
+  }
+  for(const[id,inc]of incidents)if(inc.status==="resolved"&&inc.gone&&t>inc.gone)incidents.delete(id);
+}
+/* ============ disruptions ============ */
+function randomEdge(){const a=Math.floor(Math.random()*W*H);const ns=[...adj.get(a).keys()];
+  return[a,ns[Math.floor(Math.random()*ns.length)]]}
+function closeRoad(){const[a,b]=randomEdge();closed.add(key(a,b));
+  log("t-crit",`<b>ROAD CLOSED</b> between node ${a} and ${b} — re-routing affected units`);
+  for(const u of units)if(u.status==="en_route"&&u.route&&incidents.has(u.inc)){
+    const r=astar(u.node,incidents.get(u.inc).node);
+    if(r.path){u.route=r.path;u.prog=0;u.eta=r.t;}}}
+/* ============ rendering ============ */
+const map=document.getElementById("map");
+function S(tag,attrs){const e=document.createElementNS("http://www.w3.org/2000/svg",tag);
+  for(const k in attrs)e.setAttribute(k,attrs[k]);return e}
+const gRoads=S("g",{}),gRoutes=S("g",{}),gStations=S("g",{}),gInc=S("g",{}),gUnits=S("g",{});
+map.append(gRoads,gRoutes,gStations,gInc,gUnits);
+function drawStatic(){
+  gRoads.innerHTML="";
+  for(const[a,m]of adj)for(const b of m.keys())if(a<b){
+    const p=px(a),q=px(b);const cl=closed.has(key(a,b))?"road closed":(jams.has(key(a,b))?"road jam":"road");
+    gRoads.append(S("line",{x1:p.x,y1:p.y,x2:q.x,y2:q.y,class:cl}));}
+  gStations.innerHTML="";
+  for(const s of STATIONS){const p=px(s);
+    gStations.append(S("rect",{x:p.x-5,y:p.y-5,width:10,height:10,class:"station"}));}
+}
+function draw(){
+  drawStatic();
+  gRoutes.innerHTML="";gInc.innerHTML="";gUnits.innerHTML="";
+  for(const inc of incidents.values()){
+    if(inc.status==="resolved")continue;
+    const p=px(inc.node),c=SEVC[inc.sev];
+    const ring=S("circle",{cx:0,cy:0,r:6,class:"pulse",stroke:c});
+    const wrap=S("g",{transform:`translate(${p.x},${p.y})`});
+    wrap.append(ring,S("circle",{cx:0,cy:0,r:4.5,fill:c}));
+    const tx=S("text",{x:8,y:-7,fill:c,"font-size":"9","font-family":"IBM Plex Mono"});
+    tx.textContent=inc.id.slice(3);
+    wrap.append(tx);
+    gInc.append(wrap);
+  }
+  for(const u of units){
+    if(u.status==="en_route"&&u.route&&u.route.length>1){
+      gRoutes.append(S("polyline",{points:u.route.map(n=>{const p=px(n);return p.x+","+p.y}).join(" "),class:"route"}));}
+    if(u.status==="available"||u.status==="refueling")continue;
+    let p;
+    if((u.status==="en_route"||u.status==="returning")&&u.segFrom!=null){
+      const a=px(u.segFrom),b=px(u.segTo);p={x:a.x+(b.x-a.x)*u.segF,y:a.y+(b.y-a.y)*u.segF};
+    }else p=px(u.node);
+    const col=u.type==="FireTruck"?"#FF8A3C":u.type==="Ambulance"?"#46D6A0":
+      u.type==="Police"?"#4FC1E9":u.type==="Hazmat"?"#9D7BFF":"#5AB7FF";
+    gUnits.append(S("circle",{cx:p.x,cy:p.y,r:3,fill:col,stroke:"#0A0F1A","stroke-width":1}));
+  }
+}
+/* ============ side panels ============ */
+const $=id=>document.getElementById(id);
+function fmtT(s){const m=Math.floor(s/60),ss=Math.floor(s%60);return`T+${String(m).padStart(2,"0")}:${String(ss).padStart(2,"0")}`}
+function panels(){
+  $("clock").textContent=fmtT(t);
+  $("kCalls").textContent=M.calls;
+  const act=[...incidents.values()].filter(i=>i.status!=="resolved").length;
+  $("kActive").textContent=act;
+  const pq=pending();
+  $("kBacklog").textContent=pq.length;
+  $("kMerged").textContent=M.merged;
+  $("kResp").innerHTML=(M.respN?(M.respSum/M.respN/60).toFixed(1):"—")+"<small> min</small>";
+  $("kLives").textContent=Math.round(M.lives);
+  $("qCount").textContent=pq.length+" pending";
+  $("queue").innerHTML=pq.length?pq.slice(0,8).map(i=>{
+    const need=Object.entries(i.need).map(([k,n])=>n+"× "+k).join(", ");
+    return`<div class="qrow" style="border-left-color:${SEVC[i.sev]}">
+      <div class="score" style="color:${SEVC[i.sev]}">${priority(i).toFixed(0)}</div>
+      <div><b>${i.id}</b> ${i.ty} — ${i.name}
+        <div class="meta">sev ${i.sev} · ~${i.people} people · ${i.reports} reports · needs ${need}</div></div>
+      <div class="eta">wait ${((t-i.born)/60).toFixed(1)}m</div></div>`;
+  }).join(""):`<div class="empty">No incidents waiting — all dispatched.</div>`;
+  const rows=[];
+  for(const ty of Object.keys(FLEET)){
+    const all=units.filter(u=>u.type===ty);
+    const free=all.filter(u=>u.status==="available").length;
+    const busy=all.filter(u=>u.status==="en_route"||u.status==="on_scene").length;
+    const ret=all.length-free-busy;
+    rows.push(`<div class="bar"><span>${ty}</span><span class="track">
+      <span class="busy" style="width:${busy/all.length*100}%"></span>
+      <span class="ret" style="width:${ret/all.length*100}%"></span>
+      <span class="free" style="width:${free/all.length*100}%"></span></span>
+      <span class="n">${free}/${all.length} free</span></div>`);
+  }
+  $("res").innerHTML=rows.join("");
+}
+const logEl=$("log");
+function log(cls,html){
+  const p=document.createElement("p");p.className=cls;
+  p.innerHTML=`[${fmtT(t)}] ${html}`;
+  logEl.prepend(p);
+  while(logEl.children.length>60)logEl.lastChild.remove();
+}
+/* ============ main loop ============ */
+let last=performance.now();
+function loop(now){
+  const real=(now-last)/1000;last=now;
+  if(!paused){
+    const dt=Math.min(real,0.1)*speed*10; // sim seconds this frame
+    t+=dt;
+    triageStep(dt);
+    for(const inc of pending())tryDispatch(inc);
+    moveUnits(dt);
+    if(Math.random()<dt*0.004)closeRoad();
+    if(Math.random()<dt*0.01){const[a,b]=randomEdge();jams.set(key(a,b),1.5+Math.random()*2);}
+    draw();panels();
+  }
+  requestAnimationFrame(loop);
+}
+$("btnPause").onclick=e=>{paused=!paused;e.target.textContent=paused?"Resume":"Pause";
+  e.target.setAttribute("aria-pressed",paused)};
+$("btnSpeed").onclick=e=>{speed=speed===4?16:speed===16?1:4;
+  e.target.textContent="Speed ×"+speed;e.target.setAttribute("aria-pressed",speed!==4)};
+$("btnSurge").onclick=()=>{callRate=Math.min(0.6,callRate*1.8);
+  for(let i=0;i<6;i++)spawnGT(true);
+  log("t-crit",`<b>DISASTER SURGE</b> — call rate raised to ${(callRate*60).toFixed(0)}/min, severe incidents incoming`)};
+$("btnClose").onclick=()=>closeRoad();
+log("t-dispatch","Swarm online · 4 triage agents · 1 dispatch agent · 66 units across 8 stations");
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

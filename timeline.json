@@ -1,0 +1,1404 @@
+[
+ {
+  "t": 0.0,
+  "active": 0,
+  "backlog": 0,
+  "top_priority": [],
+  "resources": {
+   "Ambulance": {
+    "available": 20,
+    "dispatched": 0,
+    "returning": 0,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 12,
+    "dispatched": 0,
+    "returning": 0,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 35,
+    "dispatched": 0,
+    "returning": 0,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 4,
+    "dispatched": 0,
+    "returning": 0,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 5,
+    "dispatched": 0,
+    "returning": 0,
+    "out": 0
+   }
+  },
+  "avg_response_min": null,
+  "lives_saved_est": 0.0,
+  "calls": 0,
+  "incidents_created": 0,
+  "duplicates_merged": 0,
+  "false_quarantined": 0,
+  "dispatches": 0,
+  "preemptions": 0,
+  "resolved": 0
+ },
+ {
+  "t": 300.0,
+  "active": 3,
+  "backlog": 0,
+  "top_priority": [],
+  "resources": {
+   "Ambulance": {
+    "available": 17,
+    "dispatched": 3,
+    "returning": 0,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 12,
+    "dispatched": 0,
+    "returning": 0,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 31,
+    "dispatched": 4,
+    "returning": 0,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 4,
+    "dispatched": 0,
+    "returning": 0,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 3,
+    "dispatched": 2,
+    "returning": 0,
+    "out": 0
+   }
+  },
+  "avg_response_min": 0.07,
+  "lives_saved_est": 10.0,
+  "calls": 17,
+  "incidents_created": 3,
+  "duplicates_merged": 6,
+  "false_quarantined": 8,
+  "dispatches": 3,
+  "preemptions": 0,
+  "resolved": 0
+ },
+ {
+  "t": 600.0,
+  "active": 13,
+  "backlog": 2,
+  "top_priority": [
+   [
+    "INC0012",
+    35.2,
+    "Building Collapse",
+    "St. Anne Church"
+   ],
+   [
+    "INC0014",
+    17.7,
+    "Hazardous Material",
+    "Eastbank Market"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 2,
+    "dispatched": 18,
+    "returning": 0,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 0,
+    "dispatched": 12,
+    "returning": 0,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 21,
+    "dispatched": 14,
+    "returning": 0,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 1,
+    "dispatched": 3,
+    "returning": 0,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 2,
+    "dispatched": 3,
+    "returning": 0,
+    "out": 0
+   }
+  },
+  "avg_response_min": 1.57,
+  "lives_saved_est": 88.0,
+  "calls": 66,
+  "incidents_created": 14,
+  "duplicates_merged": 44,
+  "false_quarantined": 10,
+  "dispatches": 12,
+  "preemptions": 1,
+  "resolved": 1
+ },
+ {
+  "t": 900.0,
+  "active": 18,
+  "backlog": 9,
+  "top_priority": [
+   [
+    "INC0012",
+    79.4,
+    "Building Collapse",
+    "St. Anne Church"
+   ],
+   [
+    "INC0018",
+    73.9,
+    "Building Collapse",
+    "Aurora Power Substation"
+   ],
+   [
+    "INC0020",
+    50.7,
+    "Hazardous Material",
+    "Copper Tower Offices"
+   ],
+   [
+    "INC0017",
+    39.0,
+    "Building Collapse",
+    "Kingsway Tunnel"
+   ],
+   [
+    "INC0014",
+    32.5,
+    "Hazardous Material",
+    "Eastbank Market"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 0,
+    "dispatched": 19,
+    "returning": 1,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 0,
+    "dispatched": 10,
+    "returning": 2,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 23,
+    "dispatched": 10,
+    "returning": 2,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 0,
+    "dispatched": 4,
+    "returning": 0,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 1,
+    "dispatched": 3,
+    "returning": 1,
+    "out": 0
+   }
+  },
+  "avg_response_min": 2.42,
+  "lives_saved_est": 114.0,
+  "calls": 135,
+  "incidents_created": 25,
+  "duplicates_merged": 102,
+  "false_quarantined": 11,
+  "dispatches": 17,
+  "preemptions": 2,
+  "resolved": 7
+ },
+ {
+  "t": 1200.0,
+  "active": 20,
+  "backlog": 12,
+  "top_priority": [
+   [
+    "INC0020",
+    103.9,
+    "Hazardous Material",
+    "Copper Tower Offices"
+   ],
+   [
+    "INC0017",
+    100.3,
+    "Building Collapse",
+    "Kingsway Tunnel"
+   ],
+   [
+    "INC0012",
+    93.7,
+    "Building Collapse",
+    "St. Anne Church"
+   ],
+   [
+    "INC0018",
+    86.5,
+    "Building Collapse",
+    "Aurora Power Substation"
+   ],
+   [
+    "INC0021",
+    85.3,
+    "Hazardous Material",
+    "Pinecrest Library"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 0,
+    "dispatched": 16,
+    "returning": 4,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 0,
+    "dispatched": 6,
+    "returning": 6,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 24,
+    "dispatched": 9,
+    "returning": 2,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 0,
+    "dispatched": 3,
+    "returning": 1,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 1,
+    "dispatched": 3,
+    "returning": 1,
+    "out": 0
+   }
+  },
+  "avg_response_min": 2.7,
+  "lives_saved_est": 148.0,
+  "calls": 224,
+  "incidents_created": 30,
+  "duplicates_merged": 186,
+  "false_quarantined": 12,
+  "dispatches": 20,
+  "preemptions": 3,
+  "resolved": 10
+ },
+ {
+  "t": 1500.0,
+  "active": 25,
+  "backlog": 18,
+  "top_priority": [
+   [
+    "INC0020",
+    113.3,
+    "Hazardous Material",
+    "Copper Tower Offices"
+   ],
+   [
+    "INC0028",
+    99.4,
+    "Hazardous Material",
+    "Mercer Bus Depot"
+   ],
+   [
+    "INC0012",
+    93.7,
+    "Building Collapse",
+    "St. Anne Church"
+   ],
+   [
+    "INC0017",
+    93.7,
+    "Building Collapse",
+    "Kingsway Tunnel"
+   ],
+   [
+    "INC0018",
+    93.7,
+    "Building Collapse",
+    "Aurora Power Substation"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 2,
+    "dispatched": 15,
+    "returning": 3,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 5,
+    "dispatched": 3,
+    "returning": 4,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 22,
+    "dispatched": 11,
+    "returning": 2,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 1,
+    "dispatched": 1,
+    "returning": 2,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 0,
+    "dispatched": 3,
+    "returning": 2,
+    "out": 0
+   }
+  },
+  "avg_response_min": 3.2,
+  "lives_saved_est": 161.0,
+  "calls": 334,
+  "incidents_created": 39,
+  "duplicates_merged": 287,
+  "false_quarantined": 13,
+  "dispatches": 23,
+  "preemptions": 4,
+  "resolved": 14
+ },
+ {
+  "t": 1800.0,
+  "active": 26,
+  "backlog": 20,
+  "top_priority": [
+   [
+    "INC0017",
+    100.4,
+    "Building Collapse",
+    "Kingsway Tunnel"
+   ],
+   [
+    "INC0029",
+    100.4,
+    "Building Collapse",
+    "Highway 9 Interchange"
+   ],
+   [
+    "INC0030",
+    100.4,
+    "Medical",
+    "Grand Station"
+   ],
+   [
+    "INC0033",
+    98.7,
+    "Building Collapse",
+    "Sunrise Apartments"
+   ],
+   [
+    "INC0012",
+    93.7,
+    "Building Collapse",
+    "St. Anne Church"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 1,
+    "dispatched": 15,
+    "returning": 4,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 3,
+    "dispatched": 6,
+    "returning": 3,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 23,
+    "dispatched": 11,
+    "returning": 1,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 0,
+    "dispatched": 2,
+    "returning": 2,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 0,
+    "dispatched": 5,
+    "returning": 0,
+    "out": 0
+   }
+  },
+  "avg_response_min": 3.83,
+  "lives_saved_est": 167.0,
+  "calls": 447,
+  "incidents_created": 45,
+  "duplicates_merged": 393,
+  "false_quarantined": 14,
+  "dispatches": 27,
+  "preemptions": 5,
+  "resolved": 19
+ },
+ {
+  "t": 2100.0,
+  "active": 30,
+  "backlog": 23,
+  "top_priority": [
+   [
+    "INC0043",
+    132.0,
+    "Medical",
+    "Lakeview Hotel"
+   ],
+   [
+    "INC0039",
+    125.6,
+    "Building Collapse",
+    "Ferris Industrial Park"
+   ],
+   [
+    "INC0033",
+    112.5,
+    "Building Collapse",
+    "Sunrise Apartments"
+   ],
+   [
+    "INC0017",
+    100.4,
+    "Building Collapse",
+    "Kingsway Tunnel"
+   ],
+   [
+    "INC0029",
+    100.4,
+    "Building Collapse",
+    "Highway 9 Interchange"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 0,
+    "dispatched": 17,
+    "returning": 3,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 6,
+    "dispatched": 5,
+    "returning": 1,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 25,
+    "dispatched": 9,
+    "returning": 1,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 1,
+    "dispatched": 2,
+    "returning": 1,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 0,
+    "dispatched": 4,
+    "returning": 1,
+    "out": 0
+   }
+  },
+  "avg_response_min": 4.76,
+  "lives_saved_est": 193.0,
+  "calls": 557,
+  "incidents_created": 50,
+  "duplicates_merged": 497,
+  "false_quarantined": 15,
+  "dispatches": 30,
+  "preemptions": 6,
+  "resolved": 20
+ },
+ {
+  "t": 2400.0,
+  "active": 33,
+  "backlog": 26,
+  "top_priority": [
+   [
+    "INC0041",
+    155.6,
+    "Medical",
+    "Harbor District"
+   ],
+   [
+    "INC0037",
+    149.8,
+    "Building Collapse",
+    "Eastbank Market"
+   ],
+   [
+    "INC0033",
+    109.6,
+    "Building Collapse",
+    "Sunrise Apartments"
+   ],
+   [
+    "INC0020",
+    109.3,
+    "Hazardous Material",
+    "Copper Tower Offices"
+   ],
+   [
+    "INC0032",
+    106.7,
+    "Hazardous Material",
+    "Bayside Pier"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 0,
+    "dispatched": 11,
+    "returning": 9,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 2,
+    "dispatched": 8,
+    "returning": 2,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 25,
+    "dispatched": 9,
+    "returning": 1,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 1,
+    "dispatched": 2,
+    "returning": 1,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 1,
+    "dispatched": 0,
+    "returning": 4,
+    "out": 0
+   }
+  },
+  "avg_response_min": 5.77,
+  "lives_saved_est": 206.0,
+  "calls": 672,
+  "incidents_created": 55,
+  "duplicates_merged": 606,
+  "false_quarantined": 17,
+  "dispatches": 33,
+  "preemptions": 7,
+  "resolved": 22
+ },
+ {
+  "t": 2700.0,
+  "active": 31,
+  "backlog": 25,
+  "top_priority": [
+   [
+    "INC0037",
+    149.8,
+    "Building Collapse",
+    "Eastbank Market"
+   ],
+   [
+    "INC0049",
+    142.0,
+    "Building Collapse",
+    "Grand Station"
+   ],
+   [
+    "INC0043",
+    130.4,
+    "Medical",
+    "Lakeview Hotel"
+   ],
+   [
+    "INC0020",
+    109.3,
+    "Hazardous Material",
+    "Copper Tower Offices"
+   ],
+   [
+    "INC0032",
+    106.7,
+    "Hazardous Material",
+    "Bayside Pier"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 0,
+    "dispatched": 12,
+    "returning": 8,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 0,
+    "dispatched": 9,
+    "returning": 3,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 30,
+    "dispatched": 5,
+    "returning": 0,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 1,
+    "dispatched": 2,
+    "returning": 1,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 1,
+    "dispatched": 1,
+    "returning": 3,
+    "out": 0
+   }
+  },
+  "avg_response_min": 5.8,
+  "lives_saved_est": 211.0,
+  "calls": 782,
+  "incidents_created": 57,
+  "duplicates_merged": 713,
+  "false_quarantined": 19,
+  "dispatches": 36,
+  "preemptions": 7,
+  "resolved": 26
+ },
+ {
+  "t": 3000.0,
+  "active": 35,
+  "backlog": 26,
+  "top_priority": [
+   [
+    "INC0018",
+    143.7,
+    "Building Collapse",
+    "Aurora Power Substation"
+   ],
+   [
+    "INC0049",
+    142.0,
+    "Building Collapse",
+    "Grand Station"
+   ],
+   [
+    "INC0041",
+    140.7,
+    "Medical",
+    "Harbor District"
+   ],
+   [
+    "INC0021",
+    130.4,
+    "Hazardous Material",
+    "Pinecrest Library"
+   ],
+   [
+    "INC0038",
+    117.2,
+    "Medical",
+    "Maple Street School"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 0,
+    "dispatched": 16,
+    "returning": 4,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 0,
+    "dispatched": 12,
+    "returning": 0,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 23,
+    "dispatched": 10,
+    "returning": 2,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 0,
+    "dispatched": 3,
+    "returning": 1,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 0,
+    "dispatched": 5,
+    "returning": 0,
+    "out": 0
+   }
+  },
+  "avg_response_min": 6.53,
+  "lives_saved_est": 227.0,
+  "calls": 898,
+  "incidents_created": 62,
+  "duplicates_merged": 823,
+  "false_quarantined": 20,
+  "dispatches": 42,
+  "preemptions": 9,
+  "resolved": 27
+ },
+ {
+  "t": 3300.0,
+  "active": 36,
+  "backlog": 29,
+  "top_priority": [
+   [
+    "INC0041",
+    149.4,
+    "Medical",
+    "Harbor District"
+   ],
+   [
+    "INC0049",
+    142.0,
+    "Building Collapse",
+    "Grand Station"
+   ],
+   [
+    "INC0021",
+    115.3,
+    "Hazardous Material",
+    "Pinecrest Library"
+   ],
+   [
+    "INC0020",
+    113.3,
+    "Hazardous Material",
+    "Copper Tower Offices"
+   ],
+   [
+    "INC0045",
+    112.5,
+    "Flood",
+    "Riverside Bridge"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 5,
+    "dispatched": 10,
+    "returning": 5,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 0,
+    "dispatched": 7,
+    "returning": 5,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 25,
+    "dispatched": 8,
+    "returning": 2,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 1,
+    "dispatched": 3,
+    "returning": 0,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 0,
+    "dispatched": 4,
+    "returning": 1,
+    "out": 0
+   }
+  },
+  "avg_response_min": 7.0,
+  "lives_saved_est": 240.0,
+  "calls": 958,
+  "incidents_created": 65,
+  "duplicates_merged": 879,
+  "false_quarantined": 21,
+  "dispatches": 42,
+  "preemptions": 9,
+  "resolved": 29
+ },
+ {
+  "t": 3600.0,
+  "active": 35,
+  "backlog": 28,
+  "top_priority": [
+   [
+    "INC0041",
+    149.4,
+    "Medical",
+    "Harbor District"
+   ],
+   [
+    "INC0049",
+    142.0,
+    "Building Collapse",
+    "Grand Station"
+   ],
+   [
+    "INC0033",
+    118.0,
+    "Building Collapse",
+    "Sunrise Apartments"
+   ],
+   [
+    "INC0021",
+    115.3,
+    "Hazardous Material",
+    "Pinecrest Library"
+   ],
+   [
+    "INC0050",
+    115.3,
+    "Fire",
+    "Mercer Bus Depot"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 1,
+    "dispatched": 17,
+    "returning": 2,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 0,
+    "dispatched": 10,
+    "returning": 2,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 22,
+    "dispatched": 11,
+    "returning": 2,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 0,
+    "dispatched": 2,
+    "returning": 2,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 0,
+    "dispatched": 5,
+    "returning": 0,
+    "out": 0
+   }
+  },
+  "avg_response_min": 7.0,
+  "lives_saved_est": 240.0,
+  "calls": 1003,
+  "incidents_created": 68,
+  "duplicates_merged": 918,
+  "false_quarantined": 24,
+  "dispatches": 46,
+  "preemptions": 9,
+  "resolved": 33
+ },
+ {
+  "t": 3900.0,
+  "active": 34,
+  "backlog": 28,
+  "top_priority": [
+   [
+    "INC0041",
+    149.4,
+    "Medical",
+    "Harbor District"
+   ],
+   [
+    "INC0049",
+    142.0,
+    "Building Collapse",
+    "Grand Station"
+   ],
+   [
+    "INC0033",
+    118.0,
+    "Building Collapse",
+    "Sunrise Apartments"
+   ],
+   [
+    "INC0021",
+    115.3,
+    "Hazardous Material",
+    "Pinecrest Library"
+   ],
+   [
+    "INC0050",
+    115.3,
+    "Fire",
+    "Mercer Bus Depot"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 3,
+    "dispatched": 10,
+    "returning": 7,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 1,
+    "dispatched": 6,
+    "returning": 5,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 25,
+    "dispatched": 10,
+    "returning": 0,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 1,
+    "dispatched": 2,
+    "returning": 1,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 0,
+    "dispatched": 2,
+    "returning": 3,
+    "out": 0
+   }
+  },
+  "avg_response_min": 7.59,
+  "lives_saved_est": 261.0,
+  "calls": 1003,
+  "incidents_created": 68,
+  "duplicates_merged": 918,
+  "false_quarantined": 24,
+  "dispatches": 46,
+  "preemptions": 9,
+  "resolved": 34
+ },
+ {
+  "t": 4200.0,
+  "active": 33,
+  "backlog": 27,
+  "top_priority": [
+   [
+    "INC0041",
+    149.4,
+    "Medical",
+    "Harbor District"
+   ],
+   [
+    "INC0049",
+    142.0,
+    "Building Collapse",
+    "Grand Station"
+   ],
+   [
+    "INC0033",
+    118.0,
+    "Building Collapse",
+    "Sunrise Apartments"
+   ],
+   [
+    "INC0021",
+    115.3,
+    "Hazardous Material",
+    "Pinecrest Library"
+   ],
+   [
+    "INC0050",
+    115.3,
+    "Fire",
+    "Mercer Bus Depot"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 3,
+    "dispatched": 11,
+    "returning": 6,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 1,
+    "dispatched": 7,
+    "returning": 4,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 22,
+    "dispatched": 9,
+    "returning": 4,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 0,
+    "dispatched": 4,
+    "returning": 0,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 1,
+    "dispatched": 1,
+    "returning": 3,
+    "out": 0
+   }
+  },
+  "avg_response_min": 7.59,
+  "lives_saved_est": 261.0,
+  "calls": 1003,
+  "incidents_created": 68,
+  "duplicates_merged": 918,
+  "false_quarantined": 24,
+  "dispatches": 47,
+  "preemptions": 9,
+  "resolved": 35
+ },
+ {
+  "t": 4500.0,
+  "active": 28,
+  "backlog": 25,
+  "top_priority": [
+   [
+    "INC0041",
+    149.4,
+    "Medical",
+    "Harbor District"
+   ],
+   [
+    "INC0049",
+    142.0,
+    "Building Collapse",
+    "Grand Station"
+   ],
+   [
+    "INC0033",
+    118.0,
+    "Building Collapse",
+    "Sunrise Apartments"
+   ],
+   [
+    "INC0021",
+    115.3,
+    "Hazardous Material",
+    "Pinecrest Library"
+   ],
+   [
+    "INC0020",
+    113.3,
+    "Hazardous Material",
+    "Copper Tower Offices"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 4,
+    "dispatched": 12,
+    "returning": 4,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 2,
+    "dispatched": 6,
+    "returning": 4,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 21,
+    "dispatched": 10,
+    "returning": 4,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 0,
+    "dispatched": 3,
+    "returning": 1,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 0,
+    "dispatched": 4,
+    "returning": 1,
+    "out": 0
+   }
+  },
+  "avg_response_min": 9.9,
+  "lives_saved_est": 265.0,
+  "calls": 1003,
+  "incidents_created": 68,
+  "duplicates_merged": 918,
+  "false_quarantined": 24,
+  "dispatches": 49,
+  "preemptions": 9,
+  "resolved": 40
+ },
+ {
+  "t": 4800.0,
+  "active": 25,
+  "backlog": 24,
+  "top_priority": [
+   [
+    "INC0041",
+    149.4,
+    "Medical",
+    "Harbor District"
+   ],
+   [
+    "INC0049",
+    142.0,
+    "Building Collapse",
+    "Grand Station"
+   ],
+   [
+    "INC0033",
+    118.0,
+    "Building Collapse",
+    "Sunrise Apartments"
+   ],
+   [
+    "INC0021",
+    115.3,
+    "Hazardous Material",
+    "Pinecrest Library"
+   ],
+   [
+    "INC0020",
+    113.3,
+    "Hazardous Material",
+    "Copper Tower Offices"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 3,
+    "dispatched": 11,
+    "returning": 6,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 0,
+    "dispatched": 8,
+    "returning": 4,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 27,
+    "dispatched": 4,
+    "returning": 4,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 1,
+    "dispatched": 2,
+    "returning": 1,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 2,
+    "dispatched": 3,
+    "returning": 0,
+    "out": 0
+   }
+  },
+  "avg_response_min": 9.9,
+  "lives_saved_est": 265.0,
+  "calls": 1003,
+  "incidents_created": 68,
+  "duplicates_merged": 918,
+  "false_quarantined": 24,
+  "dispatches": 50,
+  "preemptions": 9,
+  "resolved": 43
+ },
+ {
+  "t": 5100.0,
+  "active": 25,
+  "backlog": 24,
+  "top_priority": [
+   [
+    "INC0041",
+    149.4,
+    "Medical",
+    "Harbor District"
+   ],
+   [
+    "INC0049",
+    142.0,
+    "Building Collapse",
+    "Grand Station"
+   ],
+   [
+    "INC0033",
+    118.0,
+    "Building Collapse",
+    "Sunrise Apartments"
+   ],
+   [
+    "INC0021",
+    115.3,
+    "Hazardous Material",
+    "Pinecrest Library"
+   ],
+   [
+    "INC0020",
+    113.3,
+    "Hazardous Material",
+    "Copper Tower Offices"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 6,
+    "dispatched": 6,
+    "returning": 8,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 2,
+    "dispatched": 5,
+    "returning": 5,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 31,
+    "dispatched": 4,
+    "returning": 0,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 2,
+    "dispatched": 1,
+    "returning": 1,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 2,
+    "dispatched": 1,
+    "returning": 2,
+    "out": 0
+   }
+  },
+  "avg_response_min": 10.39,
+  "lives_saved_est": 266.0,
+  "calls": 1003,
+  "incidents_created": 68,
+  "duplicates_merged": 918,
+  "false_quarantined": 24,
+  "dispatches": 50,
+  "preemptions": 9,
+  "resolved": 43
+ },
+ {
+  "t": 5400.0,
+  "active": 24,
+  "backlog": 23,
+  "top_priority": [
+   [
+    "INC0041",
+    149.4,
+    "Medical",
+    "Harbor District"
+   ],
+   [
+    "INC0049",
+    142.0,
+    "Building Collapse",
+    "Grand Station"
+   ],
+   [
+    "INC0033",
+    118.0,
+    "Building Collapse",
+    "Sunrise Apartments"
+   ],
+   [
+    "INC0021",
+    115.3,
+    "Hazardous Material",
+    "Pinecrest Library"
+   ],
+   [
+    "INC0020",
+    113.3,
+    "Hazardous Material",
+    "Copper Tower Offices"
+   ]
+  ],
+  "resources": {
+   "Ambulance": {
+    "available": 6,
+    "dispatched": 7,
+    "returning": 7,
+    "out": 0
+   },
+   "FireTruck": {
+    "available": 1,
+    "dispatched": 5,
+    "returning": 6,
+    "out": 0
+   },
+   "PoliceUnit": {
+    "available": 30,
+    "dispatched": 4,
+    "returning": 1,
+    "out": 0
+   },
+   "HazmatTeam": {
+    "available": 0,
+    "dispatched": 2,
+    "returning": 2,
+    "out": 0
+   },
+   "RescueBoat": {
+    "available": 2,
+    "dispatched": 0,
+    "returning": 3,
+    "out": 0
+   }
+  },
+  "avg_response_min": 11.28,
+  "lives_saved_est": 267.0,
+  "calls": 1003,
+  "incidents_created": 68,
+  "duplicates_merged": 918,
+  "false_quarantined": 24,
+  "dispatches": 51,
+  "preemptions": 9,
+  "resolved": 44
+ }
+]
