@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Triage Evaluation — LLM vs Rules</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0F1A; --panel:#101827; --panel2:#0C1320; --line:#1C2940;
+  --ink:#DCE6F5; --dim:#677896; --faint:#3A4A68;
+  --crit:#FF5C49; --warn:#FFB224; --ok:#46D6A0; --cyan:#4FC1E9; --violet:#9D7BFF;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:13px/1.5 "IBM Plex Mono",monospace;min-height:100vh}
+header{display:flex;align-items:baseline;gap:14px;padding:14px 22px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#0E1525,#0A0F1A);flex-wrap:wrap}
+h1{font:700 24px/1 "Saira Condensed",sans-serif;letter-spacing:.06em;text-transform:uppercase}
+h1 em{font-style:normal;color:var(--violet)}
+.sub{color:var(--dim);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+.controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+button,select{font:600 11px "IBM Plex Mono",monospace;letter-spacing:.08em;background:var(--panel);
+  color:var(--ink);border:1px solid var(--line);padding:8px 14px;cursor:pointer;border-radius:3px}
+button.primary{border-color:var(--violet);color:var(--violet)}
+button:hover{border-color:var(--cyan);color:var(--cyan)}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,select:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+main{max-width:1180px;margin:0 auto;padding:20px 22px 60px}
+.status{padding:12px 14px;border:1px solid var(--line);background:var(--panel2);border-radius:3px;
+  margin-bottom:18px;color:var(--dim);font-size:12px}
+.status b{color:var(--warn)}
+.progress{height:6px;background:#0E1626;border-radius:3px;overflow:hidden;margin-top:8px}
+.progress i{display:block;height:100%;background:var(--violet);width:0%;transition:width .4s}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:14px 16px}
+.card .lbl{font-size:10px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;margin-bottom:10px}
+.duel{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.duel .side .who{font-size:10px;color:var(--faint);letter-spacing:.1em}
+.duel .side .v{font:700 30px/1.1 "Saira Condensed",sans-serif}
+.duel .side.llm .v{color:var(--violet)} .duel .side.rules .v{color:var(--cyan)}
+.duel .side .v small{font-size:13px;color:var(--dim)}
+.winner{font-size:10px;margin-top:6px;color:var(--ok)}
+h2{font:700 14px "Saira Condensed",sans-serif;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--dim);margin:26px 0 10px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{font:700 11px "Saira Condensed",sans-serif;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--dim);text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+td{padding:7px 8px;border-bottom:1px solid #15203466;vertical-align:top}
+td.t{color:var(--dim);max-width:380px}
+.ok{color:var(--ok)} .bad{color:var(--crit)} .meh{color:var(--warn)}
+.tag{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:2px;font-size:10px;color:var(--dim)}
+.note{color:var(--faint);font-size:11px;margin-top:8px}
+@media(max-width:760px){.duel{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Triage <em>Eval</em></h1>
+  <span class="sub">LLM extraction vs rule-based · labeled ground truth</span>
+  <div class="controls">
+    <label class="sub" for="nCalls">Calls</label>
+    <select id="nCalls"><option>20</option><option selected>40</option><option>80</option></select>
+    <button id="run" class="primary">Run evaluation</button>
+  </div>
+</header>
+<main>
+  <div class="status" id="status">Ready. This app generates labeled noisy 911 transcripts, runs the deterministic
+    rule-based extractor locally, sends the same transcripts to Claude in batches for structured extraction,
+    and scores both against ground truth. Press <b>Run evaluation</b>.
+    <div class="progress"><i id="bar"></i></div></div>
+  <div id="results"></div>
+</main>
+
+<script>
+"use strict";
+/* ---------- gazetteer + generator (labeled) ---------- */
+const LM={"Central Mall":["shopping center downtown","central shoping mall","downtown mall"],
+"Riverside Bridge":["the old bridge","riverside brige"],"Northgate Hospital":["northgate medical","north hospital"],
+"Maple Street School":["the elementary school","maple st school"],"Harbor District":["the docks","harbour district"],
+"City Hall":["town hall"],"Westside Chemical Plant":["the chemical factory","chem plant on the west side"],
+"Sunrise Apartments":["sunrise towers","sunrise apts"],"Grand Station":["the train station","main station"],
+"Oakwood Park":["the big park","oak wood park"],"Highway 9 Interchange":["the highway ramp","hwy 9"],
+"Eastbank Market":["the farmers market","eastside market"],"Kingsway Tunnel":["the tunnel","kings way underpass"],
+"Bayside Pier":["the pier","bay side boardwalk"],"Southport Stadium":["the stadium","southport arena"]};
+const NAMES=Object.keys(LM);
+const TYPES={Fire:["huge fire","flames everywhere","smoke pouring out","its burning"],
+Medical:["someone collapsed","person not breathing","heart attack","many injured"],
+Accident:["multi car pileup","truck flipped over","two cars collided"],
+Flood:["water rising fast","people stuck on roofs","flash flood"],
+"Building Collapse":["building collapsed","people trapped under rubble","wall came down"],
+"Hazardous Material":["chemical leak","toxic fumes everywhere","tanker leaking something"]};
+const PANIC=["Please help!","Oh my god,","HELP!!","Hurry please,","Send someone NOW,"];
+const URG=["I think people are trapped!","people screaming!","kids are inside!","we cant get out!"];
+const TYPO={fire:"fyre",people:"ppl",there:"ther",building:"bilding",trapped:"traped",street:"streat"};
+const BASESEV={Fire:4,Medical:3,Accident:3,Flood:3,"Building Collapse":5,"Hazardous Material":4};
+function noisify(s){return s.split(" ").map(w=>{const l=w.toLowerCase().replace(/[,.!]/g,"");
+  return(TYPO[l]&&Math.random()<.3)?w.replace(l,TYPO[l]):w}).filter(()=>Math.random()>.04).join(" ")}
+function genCalls(n){
+  const calls=[];
+  for(let i=0;i<n;i++){
+    if(Math.random()<0.12){ // false report
+      const ty=NAMES[0]&&Object.keys(TYPES)[Math.floor(Math.random()*6)];
+      const lm=NAMES[Math.floor(Math.random()*NAMES.length)];
+      calls.push({id:"C"+i,transcript:noisify(`${PANIC[Math.floor(Math.random()*5)]} I think theres a ${TYPES[ty][0]} at ${lm}? not sure, my friend told me`),
+        gt:{false_report:true,type:ty,landmark:lm}});
+      continue;
+    }
+    const ty=Object.keys(TYPES)[Math.floor(Math.random()*6)];
+    const lm=NAMES[Math.floor(Math.random()*NAMES.length)];
+    const sev=Math.max(1,Math.min(5,BASESEV[ty]+(Math.random()<.3?1:0)-(Math.random()<.25?1:0)));
+    const people=Math.max(1,Math.round(sev*6*(0.4+Math.random()*1.4)));
+    const hide=Math.random()<0.12;
+    const loc=hide?"":(Math.random()<.5?` near ${lm}`:` at ${[lm,...LM[lm]][Math.floor(Math.random()*(LM[lm].length+1))]}`);
+    let t=`${PANIC[Math.floor(Math.random()*5)]} There is a ${TYPES[ty][Math.floor(Math.random()*TYPES[ty].length)]}${loc}!`;
+    if(Math.random()<.6)t+=" "+URG[Math.floor(Math.random()*4)];
+    if(people>8&&Math.random()<.5)t+=` Maybe ${Math.max(1,Math.round(people*(0.4+Math.random()*1.4)))} people affected!`;
+    calls.push({id:"C"+i,transcript:noisify(t),gt:{false_report:false,type:ty,landmark:hide?null:lm,severity:sev,people,hidden:hide}});
+  }
+  return calls;
+}
+/* ---------- rule-based extractor (port of triage.py) ---------- */
+const KW={Fire:["fire","fyre","flames","smoke","burning"],Medical:["collapsed","heart attack","breathing","injured","unconscious"],
+Accident:["crash","pileup","collided","accident","flipped"],Flood:["flood","water rising","roofs","floating"],
+"Building Collapse":["collapsed","rubble","caved","wall came down","bilding"],
+"Hazardous Material":["chemical","toxic","fumes","leak","tanker"]};
+const HEDGE=["not sure","i think","maybe","my friend told me","?"];
+const CUES=["trapped","traped","screaming","kids","cant get out","not breathing","help"];
+function rulesExtract(tr){
+  const t=tr.toLowerCase().replace(/[^a-z0-9 ?]/g,"");
+  const scores={};for(const[ty,ks]of Object.entries(KW))scores[ty]=ks.filter(k=>t.includes(k)).length;
+  if(t.includes("rubble")||t.includes("caved"))scores["Building Collapse"]+=2;
+  let type="Unknown",best=0;for(const[ty,s]of Object.entries(scores))if(s>best){best=s;type=ty}
+  let loc=null,ls=0;
+  for(const[name,al]of Object.entries(LM))for(const a of[name,...al]){
+    const an=a.toLowerCase();
+    if(t.includes(an)){loc=name;ls=1;break}
+    // crude fuzzy: word overlap
+    const aw=an.split(" "),hits=aw.filter(w=>w.length>3&&t.includes(w)).length/aw.length;
+    if(hits>ls&&hits>=0.6){loc=name;ls=hits}
+  }
+  const m=t.match(/(\d+)\s*(?:people|ppl|persons|affected)?/);
+  const prior={Fire:8,"Building Collapse":15,Flood:12,Accident:3,Medical:1,"Hazardous Material":6,Unknown:1};
+  const people=m?Math.min(500,+m[1]):prior[type];
+  const cues=CUES.filter(c=>t.includes(c)).length, hedges=HEDGE.filter(h=>t.includes(h)).length;
+  const sevB={Fire:4,"Building Collapse":5,"Hazardous Material":4,Flood:3,Accident:3,Medical:3,Unknown:2};
+  const severity=Math.max(1,Math.min(5,sevB[type]+(cues>=2?1:0)+(people>20?1:0)-(hedges>=2?1:0)));
+  const confidence=Math.max(.05,Math.min(1,.35+.25*ls+.15*Math.min(2,best)-.2*hedges));
+  return{location:loc,incident_type:type,severity,affected_people:people,confidence};
+}
+/* ---------- LLM extractor ---------- */
+const SYS=`You are the triage extraction module of an emergency dispatch system during a disaster. Transcripts are panicked, misspelled, incomplete. For EACH transcript extract:
+- location: the matching landmark from this exact gazetteer or null if none clearly matches (never invent): ${JSON.stringify(NAMES)}
+- incident_type: one of ${JSON.stringify(Object.keys(TYPES))} or "Unknown"
+- severity: integer 1-5 (5 = mass-casualty/structure-level threat)
+- affected_people: best integer estimate (use stated numbers, else infer from type)
+- confidence: 0-1. Hedged secondhand reports ("not sure","my friend told me") must score below 0.4; clear firsthand reports with grounded location above 0.7.
+Respond ONLY with a JSON array, one object per transcript in input order, each: {"id","location","incident_type","severity","affected_people","confidence"}. No markdown.`;
+async function llmExtract(batch){
+  const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200*batch.length,
+      system:SYS,messages:[{role:"user",content:JSON.stringify(batch.map(c=>({id:c.id,transcript:c.transcript})))}]})});
+  const data=await r.json();
+  let txt=(data.content||[]).map(b=>b.text||"").join("").trim().replace(/^```json|^```|```$/g,"");
+  const rows=JSON.parse(txt);
+  if(!Array.isArray(rows)||rows.length!==batch.length)throw new Error("bad shape");
+  return rows;
+}
+/* ---------- scoring ---------- */
+function score(calls,preds){
+  let typeH=0,locH=0,nReal=0,sevE=[],pplE=[],cReal=[],cFalse=[];
+  calls.forEach((c,i)=>{const p=preds[i];
+    if(c.gt.false_report){cFalse.push(p.confidence);return}
+    nReal++;cReal.push(p.confidence);
+    if(p.incident_type===c.gt.type)typeH++;
+    if(c.gt.hidden? (p.location==null||p.location===c.gt.landmark) : p.location===c.gt.landmark)locH++;
+    sevE.push(Math.abs(p.severity-c.gt.severity));
+    pplE.push(Math.abs(p.affected_people-c.gt.people)/c.gt.people);
+  });
+  const auc=(cReal.length&&cFalse.length)?
+    cReal.reduce((s,r)=>s+cFalse.reduce((s2,f)=>s2+(r>f?1:r===f?0.5:0),0),0)/(cReal.length*cFalse.length):null;
+  pplE.sort((a,b)=>a-b);
+  return{n:calls.length,nReal,nFalse:cFalse.length,
+    type:typeH/nReal,loc:locH/nReal,
+    sevMAE:sevE.reduce((a,b)=>a+b,0)/sevE.length,
+    sevW1:sevE.filter(e=>e<=1).length/sevE.length,
+    pplMed:pplE[Math.floor(pplE.length/2)]??null,
+    auc,gateCatch:cFalse.length?cFalse.filter(c=>c<0.42).length/cFalse.length:null,
+    gateLoss:cReal.filter(c=>c<0.42).length/nReal};
+}
+/* ---------- UI ---------- */
+const $=id=>document.getElementById(id);
+function duel(lbl,llm,rules,fmt,higherBetter=true){
+  const f=fmt||(v=>v==null?"—":(v*100).toFixed(0)+"<small>%</small>");
+  let win="";
+  if(llm!=null&&rules!=null&&llm!==rules)
+    win=`<div class="winner">${(higherBetter?llm>rules:llm<rules)?"▲ LLM ahead":"▲ Rules ahead"}</div>`;
+  return`<div class="card"><div class="lbl">${lbl}</div><div class="duel">
+    <div class="side llm"><div class="who">CLAUDE (LLM)</div><div class="v">${f(llm)}</div></div>
+    <div class="side rules"><div class="who">RULE-BASED</div><div class="v">${f(rules)}</div></div>
+  </div>${win}</div>`;
+}
+function badge(ok){return ok?'<span class="ok">✓</span>':'<span class="bad">✗</span>'}
+$("run").onclick=async()=>{
+  const n=+$("nCalls").value,B=10;
+  $("run").disabled=true;
+  const calls=genCalls(n);
+  const rules=calls.map(c=>rulesExtract(c.transcript));
+  const llm=new Array(calls.length);
+  let done=0,failedBatches=0;
+  $("status").innerHTML=`Sending ${n} transcripts to Claude in batches of ${B}…<div class="progress"><i id="bar"></i></div>`;
+  for(let i=0;i<calls.length;i+=B){
+    const batch=calls.slice(i,i+B);
+    try{
+      const rows=await llmExtract(batch);
+      rows.forEach((r,j)=>llm[i+j]={location:NAMES.includes(r.location)?r.location:null,
+        incident_type:r.incident_type,severity:Math.max(1,Math.min(5,+r.severity||3)),
+        affected_people:Math.max(0,+r.affected_people||1),confidence:Math.max(0,Math.min(1,+r.confidence||0.5))});
+    }catch(e){ // graceful degradation: fall back to rules for this batch
+      failedBatches++;
+      batch.forEach((c,j)=>llm[i+j]=rulesExtract(c.transcript));
+    }
+    done=Math.min(calls.length,i+B);
+    $("bar").style.width=(done/calls.length*100)+"%";
+    $("status").firstChild.textContent=`Extracted ${done}/${calls.length}…`;
+  }
+  const sL=score(calls,llm),sR=score(calls,rules);
+  $("status").innerHTML=`Done. ${n} calls (${sL.nReal} real, ${sL.nFalse} false reports)`+
+    (failedBatches?` · <b>${failedBatches} batch(es) fell back to rules on API error</b>`:"")+
+    `<div class="progress"><i style="width:100%"></i></div>`;
+  const pct1=v=>v==null?"—":v.toFixed(2);
+  $("results").innerHTML=`
+    <div class="grid">
+      ${duel("Incident type accuracy",sL.type,sR.type)}
+      ${duel("Location accuracy",sL.loc,sR.loc)}
+      ${duel("Severity MAE (lower better)",sL.sevMAE,sR.sevMAE,pct1,false)}
+      ${duel("Severity within ±1",sL.sevW1,sR.sevW1)}
+      ${duel("People est. median rel. error (lower better)",sL.pplMed,sR.pplMed,pct1,false)}
+      ${duel("False-report AUC",sL.auc,sR.auc,v=>v==null?"—":v.toFixed(3))}
+      ${duel("False reports caught at 0.42 gate",sL.gateCatch,sR.gateCatch)}
+      ${duel("Real calls lost at gate (lower better)",sL.gateLoss,sR.gateLoss,null,false)}
+    </div>
+    <h2>Per-call detail (first 25)</h2>
+    <table><thead><tr><th>Transcript</th><th>Truth</th><th>LLM</th><th>Rules</th></tr></thead><tbody>
+    ${calls.slice(0,25).map((c,i)=>{
+      const g=c.gt,L=llm[i],R=rules[i];
+      const truth=g.false_report?'<span class="tag">FALSE REPORT</span>':
+        `${g.type} @ ${g.landmark??"<i>no location</i>"} · sev ${g.severity}`;
+      const cell=p=>{const tOk=!g.false_report&&p.incident_type===g.type;
+        const lOk=!g.false_report&&(g.hidden?(p.location==null||p.location===g.landmark):p.location===g.landmark);
+        if(g.false_report)return`conf ${p.confidence.toFixed(2)} ${p.confidence<0.42?'<span class="ok">gated ✓</span>':'<span class="bad">passed ✗</span>'}`;
+        return`${badge(tOk)} ${p.incident_type} · ${badge(lOk)} ${p.location??"<i>null</i>"} · sev ${p.severity}`;};
+      return`<tr><td class="t">"${c.transcript}"</td><td>${truth}</td><td>${cell(L)}</td><td>${cell(R)}</td></tr>`;
+    }).join("")}
+    </tbody></table>
+    <p class="note">Scoring: location credit requires the exact gazetteer landmark (or a correct null when the caller
+    gave none). Severity is scored against the ground-truth event, not the caller's wording, so some error is
+    irreducible — callers themselves misjudge. The 0.42 gate mirrors the coordinator's quarantine threshold.</p>`;
+  $("run").disabled=false;
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "rule_based": {
+    "n_calls": 201,
+    "n_real": 188,
+    "n_false": 13,
+    "type_accuracy": 0.734,
+    "location_accuracy": 0.926,
+    "severity_mae": 1.21,
+    "severity_within_1": 0.67,
+    "people_median_rel_err": 0.62,
+    "false_report_auc": 0.984,
+    "false_caught_at_gate": 1.0,
+    "real_lost_at_gate": 0.064
+  }
+}
