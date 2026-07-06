@@ -1,1 +1,7 @@
 code_walkthrough.md
+__pycache__/
+*.pyc
+runs.db
+.claude/settings.local.json
+web/node_modules/
+web/dist/

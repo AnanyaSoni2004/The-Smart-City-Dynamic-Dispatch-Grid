@@ -2,9 +2,34 @@
 
 A multi-agent AI swarm for disaster-time emergency dispatch: it ingests a high-volume stream of noisy 911 transcripts, triages and deduplicates them into incidents, prioritizes by lives at risk, and dispatches scarce resources over a live city road graph with dynamic re-routing and preemption.
 
+## Run the website (full stack)
+
+The web app runs the real Python engine server-side and streams every tick to the
+browser over WebSocket. Completed runs are saved to SQLite and get a permanent
+shareable URL (`/runs/<id>`).
+
+```
+pip install -r requirements.txt
+cd web && npm install && npm run build && cd ..
+uvicorn server.app:app --port 8000
+# open http://localhost:8000 — configure a disaster, watch the swarm live
+```
+
+Frontend development with hot reload: `cd web && npm run dev` (proxies `/api`
+to the uvicorn server on port 8000).
+
+| Piece | Where |
+|---|---|
+| FastAPI app (REST + WebSocket + static serving) | `server/app.py` |
+| Tick-stepping engine wrapper w/ unit interpolation | `server/engine.py` |
+| SQLite run store | `server/db.py` |
+| React + Vite + Tailwind frontend | `web/src/` |
+
+## Run headless (CLI)
+
 ```
 python -m dispatch_grid.main --duration 3600 --incidents 320
-open dashboard.html        # live in-browser simulation + command dashboard
+open dashboard.html        # legacy self-contained in-browser demo
 ```
 
 ---
