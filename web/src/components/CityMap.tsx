@@ -108,7 +108,8 @@ export default function CityMap({ graph, frame }: { graph: Graph; frame: Frame }
                 opacity={inc.status === 'on_scene' ? 0.55 : 0.85}
                 stroke={inc.status === 'on_scene' ? '#f8fafc' : '#0f172a'}
                 strokeWidth={inc.status === 'on_scene' ? 2 : 1} />
-              <text x={x} y={y - r - 5} textAnchor="middle" fontSize={11}
+              <text x={x} y={y - r - 5} fontSize={11}
+                textAnchor={x < 100 ? 'start' : x > w - 100 ? 'end' : 'middle'}
                 fill="#e2e8f0" fontWeight={600}>
                 {inc.loc ?? nodeOfLandmark.get(inc.node!) ?? inc.id}
               </text>

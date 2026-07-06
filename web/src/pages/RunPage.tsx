@@ -6,6 +6,7 @@ import CityMap from '../components/CityMap'
 import EventLog from '../components/EventLog'
 import IncidentFeed from '../components/IncidentFeed'
 import MetricsBar from '../components/MetricsBar'
+import Navbar from '../components/Navbar'
 import PlaybackControls from '../components/PlaybackControls'
 import ResourcePanel from '../components/ResourcePanel'
 import Sparkline from '../components/Sparkline'
@@ -22,6 +23,7 @@ export default function RunPage() {
   const [playing, setPlaying] = useState(true)
   const [following, setFollowing] = useState(true)
   const [replaySpeed, setReplaySpeed] = useState(1)
+  const [copied, setCopied] = useState(false)
   const followingRef = useRef(true)
   followingRef.current = following
 
@@ -127,38 +129,73 @@ export default function RunPage() {
 
   if (status === 'not_found') {
     return (
-      <div className="mx-auto max-w-xl px-6 py-24 text-center">
-        <h1 className="text-2xl font-bold text-white">Run not found</h1>
-        <p className="mt-2 text-slate-400">This run id doesn't exist (or the database was reset).</p>
-        <Link to="/" className="mt-6 inline-block rounded-lg bg-orange-600 px-5 py-2 font-semibold text-white">
-          Launch a new simulation
-        </Link>
-      </div>
+      <>
+        <Navbar />
+        <div className="mx-auto max-w-xl px-6 py-24 text-center">
+          <h1 className="text-2xl font-bold text-white">Run not found</h1>
+          <p className="mt-2 text-slate-400">This run id doesn't exist (or the database was reset).</p>
+          <Link to="/" className="mt-6 inline-block rounded-lg bg-orange-600 px-5 py-2 font-semibold text-white">
+            Launch a new simulation
+          </Link>
+        </div>
+      </>
     )
   }
 
   return (
+    <>
+    <Navbar>
+      {status === 'complete' && frames.length > 0 && (
+        <button
+          onClick={() => {
+            navigator.clipboard?.writeText(location.href)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 1800)
+          }}
+          className={`rounded-lg border px-3 py-1.5 text-xs transition ${
+            copied ? 'border-emerald-500/60 text-emerald-400'
+                   : 'border-slate-700 text-slate-300 hover:border-orange-500/60'}`}>
+          {copied ? '✓ Copied' : 'Copy share link'}
+        </button>
+      )}
+    </Navbar>
     <div className="mx-auto max-w-[1500px] px-4 py-5">
-      <header className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Link to="/" className="text-sm text-slate-400 hover:text-white">← Dispatch Grid</Link>
-        <h1 className="font-mono text-lg font-semibold text-orange-400">run #{id}</h1>
-        {params && (
-          <span className="text-sm text-slate-500">
-            {Math.round(params.duration / 60)} min · {params.incidents} incidents · seed {params.seed}
+      <header className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <h1 className="font-mono text-lg font-semibold text-white">
+          run <span className="text-orange-400">#{id}</span>
+        </h1>
+        {status === 'running' && (
+          <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
+            <span className="live-dot inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            LIVE
           </span>
         )}
-        {status === 'complete' && frames.length > 0 && (
-          <button
-            onClick={() => navigator.clipboard?.writeText(location.href)}
-            className="ml-auto rounded-lg border border-slate-700 px-3 py-1 text-xs text-slate-300 hover:border-orange-500/60">
-            Copy share link
-          </button>
+        {status === 'complete' && (
+          <span className="rounded-full bg-slate-700/40 px-2.5 py-0.5 text-xs text-slate-400">
+            replay
+          </span>
+        )}
+        {params && (
+          <div className="flex flex-wrap gap-1.5 text-xs">
+            {[`${Math.round(params.duration / 60)} min`,
+              `${params.incidents} incidents`,
+              `seed ${params.seed}`].map(chip => (
+              <span key={chip}
+                className="rounded-full border border-slate-800 bg-slate-900/60 px-2.5 py-0.5 text-slate-400">
+                {chip}
+              </span>
+            ))}
+          </div>
         )}
       </header>
 
       {!frame || !graph ? (
-        <div className="flex h-96 items-center justify-center text-slate-500">
-          {status === 'loading' ? 'Loading run…' : 'Waiting for first frame…'}
+        <div className="flex h-96 flex-col items-center justify-center gap-4 text-slate-500">
+          <svg className="spinner h-8 w-8 text-orange-500" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.2" />
+            <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+          {status === 'loading' ? 'Loading run…' : 'Spinning up the swarm…'}
         </div>
       ) : (
         <div className="space-y-3">
@@ -191,5 +228,6 @@ export default function RunPage() {
         </div>
       )}
     </div>
+    </>
   )
 }

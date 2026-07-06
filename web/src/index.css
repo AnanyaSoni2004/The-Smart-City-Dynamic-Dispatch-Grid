@@ -7,6 +7,32 @@
 body {
   @apply bg-slate-950 text-slate-200 antialiased;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(249, 115, 22, 0.07), transparent),
+    radial-gradient(ellipse 60% 40% at 90% 110%, rgba(56, 189, 248, 0.04), transparent);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(249, 115, 22, 0.35);
+}
+
+/* slim dark scrollbars for the panel lists */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 @keyframes ping-slow {
@@ -26,3 +52,10 @@ body {
   50% { opacity: 0.35; }
 }
 .live-dot { animation: blink 1.2s ease-in-out infinite; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  animation: spin 0.8s linear infinite;
+}
