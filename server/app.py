@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
@@ -56,6 +56,8 @@ class ActiveRun:
 
 
 ACTIVE: dict[str, ActiveRun] = {}
+# protects the free-tier host: strangers can't pile up CPU-burning simulations
+MAX_ACTIVE_RUNS = 4
 
 
 async def _run_loop(run: ActiveRun) -> None:
@@ -84,6 +86,10 @@ async def _run_loop(run: ActiveRun) -> None:
 
 @app.post("/api/runs")
 async def create_run(params: RunParams) -> dict:
+    if sum(1 for r in ACTIVE.values() if not r.done) >= MAX_ACTIVE_RUNS:
+        raise HTTPException(
+            429, "All simulation slots are busy right now — watch a recent "
+                 "run or try again in a minute.")
     run_id = secrets.token_hex(4)
     session = await asyncio.to_thread(
         SimulationSession, params.duration, params.tick,
@@ -159,14 +165,23 @@ async def run_stream(ws: WebSocket, run_id: str) -> None:
             run.subscribers.remove(q)
 
 
+@app.get("/api/stats")
+async def stats() -> dict:
+    return await asyncio.to_thread(db.visit_stats)
+
+
 # ---------------- static frontend ----------------
 DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
 if DIST.exists():
     app.mount("/assets", StaticFiles(directory=DIST / "assets"), name="assets")
 
     @app.get("/{path:path}")
-    async def spa(path: str):
+    async def spa(path: str, request: Request):
         target = DIST / path
         if path and target.is_file():
             return FileResponse(target)
+        # page view (not an asset): record a first-party analytics entry
+        await asyncio.to_thread(
+            db.log_visit, f"/{path}",
+            request.headers.get("referer"), request.headers.get("user-agent"))
         return FileResponse(DIST / "index.html")

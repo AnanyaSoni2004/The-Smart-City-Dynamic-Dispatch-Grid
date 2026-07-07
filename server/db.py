@@ -8,21 +8,32 @@ from pathlib import Path
 
 DB_PATH = Path(__file__).resolve().parent.parent / "runs.db"
 
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS runs (
-    id         TEXT PRIMARY KEY,
-    created_at TEXT NOT NULL,
-    params     TEXT NOT NULL,
-    summary    TEXT,
-    graph      TEXT,
-    timeline   TEXT
-);
-"""
+_SCHEMA = [
+    """
+    CREATE TABLE IF NOT EXISTS runs (
+        id         TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL,
+        params     TEXT NOT NULL,
+        summary    TEXT,
+        graph      TEXT,
+        timeline   TEXT
+    );
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS visits (
+        ts       TEXT NOT NULL,
+        path     TEXT NOT NULL,
+        referrer TEXT,
+        ua       TEXT
+    );
+    """,
+]
 
 
 def _connect() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
-    conn.execute(_SCHEMA)
+    for stmt in _SCHEMA:
+        conn.execute(stmt)
     return conn
 
 
@@ -48,6 +59,33 @@ def get_run(run_id: str) -> dict | None:
         "params": json.loads(row[2]), "summary": json.loads(row[3] or "null"),
         "graph": json.loads(row[4] or "null"),
         "timeline": json.loads(row[5] or "[]"),
+    }
+
+
+def log_visit(path: str, referrer: str | None, ua: str | None) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "INSERT INTO visits VALUES (?, ?, ?, ?)",
+            (datetime.now(timezone.utc).isoformat(), path, referrer, ua))
+
+
+def visit_stats() -> dict:
+    with _connect() as conn:
+        total = conn.execute("SELECT COUNT(*) FROM visits").fetchone()[0]
+        by_day = conn.execute(
+            "SELECT substr(ts, 1, 10) AS day, COUNT(*) FROM visits "
+            "GROUP BY day ORDER BY day DESC LIMIT 14").fetchall()
+        by_path = conn.execute(
+            "SELECT path, COUNT(*) AS n FROM visits "
+            "GROUP BY path ORDER BY n DESC LIMIT 10").fetchall()
+        referrers = conn.execute(
+            "SELECT referrer, COUNT(*) AS n FROM visits WHERE referrer IS NOT NULL "
+            "AND referrer != '' GROUP BY referrer ORDER BY n DESC LIMIT 10").fetchall()
+    return {
+        "total_visits": total,
+        "by_day": dict(by_day),
+        "top_paths": dict(by_path),
+        "top_referrers": dict(referrers),
     }
 
 

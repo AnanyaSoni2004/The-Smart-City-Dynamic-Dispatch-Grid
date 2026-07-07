@@ -26,6 +26,7 @@ export default function Home() {
   const nav = useNavigate()
   const [runs, setRuns] = useState<RunMeta[]>([])
   const [starting, setStarting] = useState(false)
+  const [demoStarting, setDemoStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [durationMin, setDurationMin] = useState(60)
   const [incidents, setIncidents] = useState(320)
@@ -49,8 +50,28 @@ export default function Home() {
       })
       nav(`/runs/${id}`)
     } catch (e) {
-      setError(String(e))
+      setError(e instanceof Error ? e.message : String(e))
       setStarting(false)
+    }
+  }
+
+  async function watchDemo() {
+    setDemoStarting(true)
+    setError(null)
+    try {
+      // a live one-minute showcase: dense disaster, brisk pace
+      const { id } = await createRun({
+        duration: 1800, incidents: 150, seed: 42, speed: 60, tick: 10,
+      })
+      nav(`/runs/${id}`)
+    } catch {
+      // slots busy (or backend hiccup): fall back to the newest replay
+      const done = runs.find(r => r.status === 'complete')
+      if (done) nav(`/runs/${done.id}`)
+      else {
+        setError('No demo slot free right now — try again in a minute.')
+        setDemoStarting(false)
+      }
     }
   }
 
@@ -78,10 +99,24 @@ export default function Home() {
             re-routing around closures and preempting lower-priority missions as the
             crisis unfolds.
           </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <button onClick={watchDemo} disabled={demoStarting}
+              className="rounded-lg bg-orange-600 px-7 py-2.5 font-semibold text-white shadow-lg shadow-orange-950/40 transition hover:bg-orange-500 disabled:opacity-50">
+              {demoStarting ? 'Starting…' : '▶  Watch a live demo'}
+            </button>
+            <a href="#configure"
+              className="rounded-lg border border-slate-700 px-6 py-2.5 font-semibold text-slate-300 transition hover:border-orange-500/60 hover:text-white">
+              Configure your own
+            </a>
+          </div>
+          {error && !starting && (
+            <p className="mt-4 text-sm text-rose-400">{error}</p>
+          )}
         </header>
 
         {/* scenario form */}
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-xl shadow-black/20">
+        <section id="configure"
+          className="scroll-mt-20 rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-xl shadow-black/20">
           <div className="mb-5 flex items-baseline justify-between">
             <h2 className="text-lg font-semibold text-white">Configure a disaster</h2>
             <span className="text-xs text-slate-500">runs server-side · shareable replay</span>

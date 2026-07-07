@@ -6,7 +6,14 @@ export async function createRun(params: Partial<RunParams>): Promise<{ id: strin
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   })
-  if (!res.ok) throw new Error(`failed to start run: ${res.status}`)
+  if (!res.ok) {
+    let msg = `failed to start run (${res.status})`
+    try {
+      const body = await res.json()
+      if (body.detail) msg = String(body.detail)
+    } catch { /* non-JSON error body */ }
+    throw new Error(msg)
+  }
   return res.json()
 }
 
