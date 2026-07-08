@@ -2,6 +2,8 @@
 
 A multi-agent AI swarm for disaster-time emergency dispatch: it ingests a high-volume stream of noisy 911 transcripts, triages and deduplicates them into incidents, prioritizes by lives at risk, and dispatches scarce resources over a live city road graph with dynamic re-routing and preemption.
 
+> 📘 **[DOCUMENTATION.md](DOCUMENTATION.md)** — the complete technical guide: every layer, every file, and every significant line of code explained, from the swarm engine through the web stack to the OSM data pipeline and deployment.
+
 ## Run the website (full stack)
 
 The web app runs the real Python engine server-side and streams every tick to the
