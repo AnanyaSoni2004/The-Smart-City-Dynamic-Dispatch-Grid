@@ -2,7 +2,6 @@ import { useMemo } from 'react'
 import type { Frame, Graph } from '../types'
 import { INCIDENT_COLORS, UNIT_COLORS, UNIT_LABELS } from '../theme'
 
-const SCALE = 64
 const PAD = 40
 
 function edgeKey(a: number, b: number) {
@@ -10,8 +9,11 @@ function edgeKey(a: number, b: number) {
 }
 
 export default function CityMap({ graph, frame }: { graph: Graph; frame: Frame }) {
+  // grid cities are ~12 units wide, real cities ~25 km tall: fit either
+  const SCALE = Math.min(64, Math.max(34, 950 / Math.max(graph.width, graph.height)))
   const w = (graph.width - 1) * SCALE + PAD * 2
   const h = (graph.height - 1) * SCALE + PAD * 2
+  const manyNodes = Object.keys(graph.nodes).length > 600
   const px = (x: number) => PAD + x * SCALE
   const py = (y: number) => PAD + y * SCALE
   const nodeXY = (n: number) => {
@@ -19,14 +21,20 @@ export default function CityMap({ graph, frame }: { graph: Graph; frame: Frame }
     return [px(c[0]), py(c[1])] as const
   }
 
+  // stable digests: frame arrays are fresh objects every tick, but their
+  // contents change rarely — keep the Set/Map (and road layer) cached
+  const closedKey = frame.closed.map(e => e.join('.')).join(',')
+  const congKey = frame.congestion.map(e => e.join('.')).join(',')
   const closed = useMemo(
     () => new Set(frame.closed.map(([a, b]) => edgeKey(a, b))),
-    [frame.closed])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [closedKey])
   const congestion = useMemo(() => {
     const m = new Map<string, number>()
     for (const [a, b, mult] of frame.congestion) m.set(edgeKey(a, b), mult)
     return m
-  }, [frame.congestion])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [congKey])
 
   const nodeOfLandmark = useMemo(() => {
     const m = new Map<number, string>()
@@ -53,32 +61,38 @@ export default function CityMap({ graph, frame }: { graph: Graph; frame: Frame }
     return out
   }, [frame.units])
 
+  // the road layer is thousands of lines on real maps: re-render it only
+  // when closures/congestion actually change, not on every frame
+  const roadLayer = useMemo(() => (
+    <g>
+      {graph.edges.map(([a, b]) => {
+        const [x1, y1] = nodeXY(a)
+        const [x2, y2] = nodeXY(b)
+        const k = edgeKey(a, b)
+        if (closed.has(k)) {
+          return <line key={k} x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke="#f43f5e" strokeWidth={2.5} strokeDasharray="6 5" opacity={0.85} />
+        }
+        const mult = congestion.get(k)
+        if (mult) {
+          return <line key={k} x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke="#f59e0b" strokeWidth={1.5 + mult}
+            opacity={Math.min(0.75, 0.25 + mult * 0.12)} />
+        }
+        return <line key={k} x1={x1} y1={y1} x2={x2} y2={y2}
+          stroke="#1e293b" strokeWidth={manyNodes ? 1.2 : 2} />
+      })}
+      {!manyNodes && Object.entries(graph.nodes).map(([n, [x, y]]) => (
+        <circle key={n} cx={px(x)} cy={py(y)} r={2.5} fill="#334155" />
+      ))}
+    </g>
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [graph, closed, congestion])
+
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-3">
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full">
-        {/* roads */}
-        {graph.edges.map(([a, b]) => {
-          const [x1, y1] = nodeXY(a)
-          const [x2, y2] = nodeXY(b)
-          const k = edgeKey(a, b)
-          if (closed.has(k)) {
-            return <line key={k} x1={x1} y1={y1} x2={x2} y2={y2}
-              stroke="#f43f5e" strokeWidth={2.5} strokeDasharray="6 5" opacity={0.85} />
-          }
-          const mult = congestion.get(k)
-          if (mult) {
-            return <line key={k} x1={x1} y1={y1} x2={x2} y2={y2}
-              stroke="#f59e0b" strokeWidth={1.5 + mult}
-              opacity={Math.min(0.75, 0.25 + mult * 0.12)} />
-          }
-          return <line key={k} x1={x1} y1={y1} x2={x2} y2={y2}
-            stroke="#1e293b" strokeWidth={2} />
-        })}
-
-        {/* intersections */}
-        {Object.entries(graph.nodes).map(([n, [x, y]]) => (
-          <circle key={n} cx={px(x)} cy={py(y)} r={2.5} fill="#334155" />
-        ))}
+        {roadLayer}
 
         {/* stations */}
         {graph.stations.map(n => {

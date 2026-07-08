@@ -1,4 +1,5 @@
 export interface Graph {
+  city?: string | null
   width: number
   height: number
   nodes: Record<string, [number, number]>
@@ -67,6 +68,7 @@ export interface RunParams {
   seed: number
   tick: number
   speed: number
+  mode?: 'synthetic' | 'seattle'
 }
 
 export interface RunMeta {

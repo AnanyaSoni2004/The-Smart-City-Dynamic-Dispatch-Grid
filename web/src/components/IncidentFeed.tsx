@@ -7,11 +7,13 @@ const STATUS_STYLE: Record<string, string> = {
   on_scene: 'bg-sky-500/15 text-sky-300',
 }
 
-export default function IncidentFeed({ incidents }: { incidents: IncidentView[] }) {
+export default function IncidentFeed({ incidents, resolved }: {
+  incidents: IncidentView[]
+  resolved: number
+}) {
   const active = incidents
     .filter(i => i.status !== 'resolved')
     .sort((a, b) => b.pri - a.pri)
-  const resolved = incidents.filter(i => i.status === 'resolved').length
 
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">

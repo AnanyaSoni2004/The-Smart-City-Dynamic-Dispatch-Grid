@@ -40,6 +40,7 @@ class RunParams(BaseModel):
     seed: int = Field(42, ge=0, le=10_000_000)
     tick: float = Field(10.0, ge=5, le=60)
     speed: float = Field(120.0, ge=10, le=600)         # sim-seconds per real second
+    mode: str = Field("synthetic", pattern="^(synthetic|seattle)$")
 
 
 @dataclass
@@ -91,9 +92,16 @@ async def create_run(params: RunParams) -> dict:
             429, "All simulation slots are busy right now — watch a recent "
                  "run or try again in a minute.")
     run_id = secrets.token_hex(4)
-    session = await asyncio.to_thread(
-        SimulationSession, params.duration, params.tick,
-        params.seed, params.incidents)
+    try:
+        session = await asyncio.to_thread(
+            SimulationSession, params.duration, params.tick,
+            params.seed, params.incidents, params.mode)
+    except Exception:
+        if params.mode == "seattle":
+            raise HTTPException(
+                502, "Couldn't fetch live Seattle 911 data right now — "
+                     "try again in a minute, or run a synthetic disaster.")
+        raise
     run = ActiveRun(id=run_id, params=params, session=session,
                     graph=session.static_payload(),
                     created_at=datetime.now(timezone.utc).isoformat())

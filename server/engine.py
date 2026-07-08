@@ -12,44 +12,82 @@ import random
 from typing import Optional
 
 from dispatch_grid.callgen import CallGenerator, LANDMARKS
-from dispatch_grid.models import IncidentStatus, UnitStatus
+from dispatch_grid.coordinator import EventBus, SwarmCoordinator
+from dispatch_grid.models import IncidentStatus, UnitStatus, UnitType
 from dispatch_grid.simulation import build_system
+from dispatch_grid.triage import TriageAgent
+
+from . import realmode
 
 DRAIN_SECONDS = 1800.0  # keep ticking after the last call, like run()
+
+SEATTLE_FLEET = {
+    UnitType.AMBULANCE: 30,
+    UnitType.FIRE_TRUCK: 30,
+    UnitType.POLICE: 25,
+    UnitType.HAZMAT_TEAM: 4,
+    UnitType.RESCUE_BOAT: 4,
+}
 
 
 class SimulationSession:
     def __init__(self, duration: float = 3600.0, tick: float = 10.0,
-                 seed: int = 42, n_incidents: int = 320):
+                 seed: int = 42, n_incidents: int = 320,
+                 mode: str = "synthetic"):
         self.duration = duration
         self.tick = tick
         self.seed = seed
         self.n_incidents = n_incidents
+        self.mode = mode
 
-        self.graph, self.bus, self.coord = build_system()
-        gen = CallGenerator(n_incidents=n_incidents, duration=duration, seed=seed)
-        self.calls = gen.generate()
-        rng = random.Random(seed + 1)
-
+        self.calls = []
+        self.reports = []
         self.disruptions: list[tuple[float, str, int, int]] = []
-        nodes = list(self.graph.coords)
-        for _ in range(14):
-            a = rng.choice(nodes)
-            nbrs = list(self.graph.adj[a])
-            if nbrs:
-                self.disruptions.append(
-                    (rng.uniform(0, duration * 0.8), "close", a, rng.choice(nbrs)))
-        for _ in range(30):
-            a = rng.choice(nodes)
-            nbrs = list(self.graph.adj[a])
-            if nbrs:
-                self.disruptions.append(
-                    (rng.uniform(0, duration * 0.9), "congest", a, rng.choice(nbrs)))
-        self.disruptions.sort(key=lambda d: d[0])
-        self._congest_rng = rng
+
+        if mode == "seattle":
+            city = realmode.load_city()
+            self.city_name = city["city"]
+            self.graph = realmode.RealCityGraph(city)
+            self.bus = EventBus()
+            dispatch = realmode.RegionalDispatchAgent(
+                self.graph, SEATTLE_FLEET,
+                [s["node"] for s in city["stations"]])
+            self.coord = SwarmCoordinator(
+                [TriageAgent(f"triage-{i}") for i in range(4)],
+                dispatch, self.bus)
+            # keep demand roughly matched to the fleet: ~200 real calls
+            # per simulated hour, since real spacing gets compressed
+            max_calls = int(min(250, max(60, duration / 3600 * 200)))
+            self.reports = realmode.build_reports(city, duration, max_calls)
+            if not self.reports:
+                raise RuntimeError("no live 911 records available")
+        else:
+            self.city_name = None
+            self.graph, self.bus, self.coord = build_system()
+            gen = CallGenerator(n_incidents=n_incidents, duration=duration,
+                                seed=seed)
+            self.calls = gen.generate()
+            rng = random.Random(seed + 1)
+            nodes = list(self.graph.coords)
+            for _ in range(14):
+                a = rng.choice(nodes)
+                nbrs = list(self.graph.adj[a])
+                if nbrs:
+                    self.disruptions.append(
+                        (rng.uniform(0, duration * 0.8), "close", a, rng.choice(nbrs)))
+            for _ in range(30):
+                a = rng.choice(nodes)
+                nbrs = list(self.graph.adj[a])
+                if nbrs:
+                    self.disruptions.append(
+                        (rng.uniform(0, duration * 0.9), "congest",
+                         a, rng.choice(nbrs)))
+            self.disruptions.sort(key=lambda d: d[0])
+            self._congest_rng = rng
 
         self.t = 0.0
         self._ci = 0
+        self._ri = 0
         self._di = 0
         self._bus_cursor = 0
         # unit_id -> (depart_time, eta, from_node) for motion interpolation
@@ -68,13 +106,16 @@ class SimulationSession:
                     seen.add(k)
                     edges.append([k[0], k[1]])
         stations = sorted({u.home_node for u in self.coord.dispatch.units.values()})
+        landmarks = ({} if self.mode == "seattle"
+                     else {name: d["node"] for name, d in LANDMARKS.items()})
         return {
+            "city": self.city_name,
             "width": self.graph.width,
             "height": self.graph.height,
             "nodes": {str(n): [x, y] for n, (x, y) in self.graph.coords.items()},
             "edges": edges,
             "stations": stations,
-            "landmarks": {name: d["node"] for name, d in LANDMARKS.items()},
+            "landmarks": landmarks,
         }
 
     # ---------------- stepping ----------------
@@ -86,6 +127,12 @@ class SimulationSession:
         while self._ci < len(self.calls) and self.calls[self._ci].received_at <= t:
             self.bus.publish("calls.incoming", {"call": self.calls[self._ci]}, t)
             self._ci += 1
+        # real mode: CAD records arrive pre-structured, skipping text triage
+        while (self._ri < len(self.reports)
+               and self.reports[self._ri].received_at <= t):
+            self.coord.metrics["calls"] += 1
+            self.bus.publish("triage.report", {"report": self.reports[self._ri]}, t)
+            self._ri += 1
         while self._di < len(self.disruptions) and self.disruptions[self._di][0] <= t:
             _, kind, a, b = self.disruptions[self._di]
             if kind == "close":
@@ -163,7 +210,9 @@ class SimulationSession:
         snap = self.coord.snapshot(now)
         incidents = []
         for inc in self.coord.incidents.values():
-            if inc.status == IncidentStatus.FALSE_REPORT:
+            # resolved/false incidents aren't rendered; keeping them would
+            # balloon late-run frames (resolved count lives in metrics)
+            if inc.status in (IncidentStatus.FALSE_REPORT, IncidentStatus.RESOLVED):
                 continue
             incidents.append({
                 "id": inc.incident_id,
@@ -217,4 +266,5 @@ class SimulationSession:
         snap = self.coord.snapshot(self.t)
         snap.pop("top_priority", None)
         snap.pop("resources", None)
+        snap["mode"] = self.mode
         return snap

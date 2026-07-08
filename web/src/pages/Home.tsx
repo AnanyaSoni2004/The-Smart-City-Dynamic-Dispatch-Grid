@@ -28,6 +28,7 @@ export default function Home() {
   const [starting, setStarting] = useState(false)
   const [demoStarting, setDemoStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [mode, setMode] = useState<'synthetic' | 'seattle'>('seattle')
   const [durationMin, setDurationMin] = useState(60)
   const [incidents, setIncidents] = useState(320)
   const [seed, setSeed] = useState(42)
@@ -47,6 +48,7 @@ export default function Home() {
         seed,
         speed,
         tick: 10,
+        mode,
       })
       nav(`/runs/${id}`)
     } catch (e) {
@@ -121,6 +123,36 @@ export default function Home() {
             <h2 className="text-lg font-semibold text-white">Configure a disaster</h2>
             <span className="text-xs text-slate-500">runs server-side · shareable replay</span>
           </div>
+          <div className="mb-6 grid gap-3 sm:grid-cols-2">
+            <button onClick={() => setMode('seattle')}
+              className={`rounded-xl border p-4 text-left transition ${
+                mode === 'seattle'
+                  ? 'border-orange-500/70 bg-orange-500/10'
+                  : 'border-slate-800 bg-slate-950/40 hover:border-slate-600'}`}>
+              <div className="flex items-center gap-2 font-semibold text-white">
+                Seattle — real 911 calls
+                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold tracking-wide text-emerald-400">
+                  REAL DATA
+                </span>
+              </div>
+              <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                Replays the latest real Seattle Fire Dept 911 calls on the real
+                road network (OpenStreetMap + data.seattle.gov), time-compressed
+                into your chosen window.
+              </p>
+            </button>
+            <button onClick={() => setMode('synthetic')}
+              className={`rounded-xl border p-4 text-left transition ${
+                mode === 'synthetic'
+                  ? 'border-orange-500/70 bg-orange-500/10'
+                  : 'border-slate-800 bg-slate-950/40 hover:border-slate-600'}`}>
+              <div className="font-semibold text-white">Synthetic disaster</div>
+              <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                1,000+ generated noisy 911 transcripts on a grid city — exercises
+                the full text-triage pipeline with duplicates and false reports.
+              </p>
+            </button>
+          </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <label className="block">
               <span className="text-sm text-slate-400">Call stream duration</span>
@@ -131,21 +163,25 @@ export default function Home() {
                 <span className="w-16 text-right font-mono text-sm">{durationMin}m</span>
               </div>
             </label>
-            <label className="block">
-              <span className="text-sm text-slate-400">Ground-truth incidents</span>
-              <div className="mt-1 flex items-center gap-3">
-                <input type="range" min={20} max={600} step={20} value={incidents}
-                  onChange={e => setIncidents(Number(e.target.value))}
-                  className="w-full accent-orange-500" />
-                <span className="w-16 text-right font-mono text-sm">{incidents}</span>
-              </div>
-            </label>
-            <label className="block">
-              <span className="text-sm text-slate-400">Random seed</span>
-              <input type="number" value={seed} min={0}
-                onChange={e => setSeed(Number(e.target.value))}
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 font-mono text-sm focus:border-orange-500 focus:outline-none" />
-            </label>
+            {mode === 'synthetic' && (
+              <label className="block">
+                <span className="text-sm text-slate-400">Ground-truth incidents</span>
+                <div className="mt-1 flex items-center gap-3">
+                  <input type="range" min={20} max={600} step={20} value={incidents}
+                    onChange={e => setIncidents(Number(e.target.value))}
+                    className="w-full accent-orange-500" />
+                  <span className="w-16 text-right font-mono text-sm">{incidents}</span>
+                </div>
+              </label>
+            )}
+            {mode === 'synthetic' && (
+              <label className="block">
+                <span className="text-sm text-slate-400">Random seed</span>
+                <input type="number" value={seed} min={0}
+                  onChange={e => setSeed(Number(e.target.value))}
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 font-mono text-sm focus:border-orange-500 focus:outline-none" />
+              </label>
+            )}
             <label className="block">
               <span className="text-sm text-slate-400">Simulation speed</span>
               <select value={speed} onChange={e => setSpeed(Number(e.target.value))}
@@ -205,8 +241,10 @@ export default function Home() {
                     </span>
                   </div>
                   <div className="mt-2 text-sm text-slate-400">
-                    {Math.round(r.params.duration / 60)} min · {r.params.incidents} incidents
-                    · seed {r.params.seed}
+                    {r.params.mode === 'seattle'
+                      ? <>Seattle · real 911 calls · {Math.round(r.params.duration / 60)} min</>
+                      : <>{Math.round(r.params.duration / 60)} min · {r.params.incidents} incidents
+                          · seed {r.params.seed}</>}
                   </div>
                   {r.summary != null && (
                     <div className="mt-1 text-xs text-slate-500">

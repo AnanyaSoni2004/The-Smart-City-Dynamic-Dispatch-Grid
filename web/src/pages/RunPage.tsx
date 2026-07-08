@@ -177,9 +177,11 @@ export default function RunPage() {
         )}
         {params && (
           <div className="flex flex-wrap gap-1.5 text-xs">
-            {[`${Math.round(params.duration / 60)} min`,
-              `${params.incidents} incidents`,
-              `seed ${params.seed}`].map(chip => (
+            {(params.mode === 'seattle'
+              ? ['Seattle — real 911 calls', `${Math.round(params.duration / 60)} min`]
+              : [`${Math.round(params.duration / 60)} min`,
+                 `${params.incidents} incidents`,
+                 `seed ${params.seed}`]).map(chip => (
               <span key={chip}
                 className="rounded-full border border-slate-800 bg-slate-900/60 px-2.5 py-0.5 text-slate-400">
                 {chip}
@@ -221,7 +223,8 @@ export default function RunPage() {
                   current={frame.metrics.avg_response_min != null ? `${frame.metrics.avg_response_min}m` : '–'} />
               </div>
               <ResourcePanel resources={frame.resources} />
-              <IncidentFeed incidents={frame.incidents} />
+              <IncidentFeed incidents={frame.incidents}
+                resolved={frame.metrics.resolved} />
               <EventLog events={events} />
             </div>
           </div>
