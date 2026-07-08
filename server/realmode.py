@@ -1,17 +1,20 @@
-"""Real-data mode: OpenStreetMap road graph + live Seattle Fire 911 calls.
+"""Real-data mode: OpenStreetMap road graphs + real or realistic incidents.
 
 The synthetic mode invents a city and 911 transcripts; this module swaps
-both for reality. Roads come from scripts/build_city.py output (committed
-JSON); incidents come from Seattle's open CAD feed (data.seattle.gov,
-dataset kzjm-xkqj), replayed as structured TriageReports — real call
-transcripts are never public, so triage-by-text is bypassed and the rest
-of the swarm (dedup, quarantine, priority queue, dispatch, routing,
-preemption) runs unchanged on real incidents at real locations.
+the city for reality. Roads, stations and landmarks come from
+scripts/build_city.py output (committed JSON, one file per city).
+Incidents come from a live open CAD feed where one exists (Seattle:
+data.seattle.gov kzjm-xkqj) — real call transcripts are never public, so
+triage-by-text is bypassed and the rest of the swarm (dedup, quarantine,
+priority queue, dispatch, routing, preemption) runs unchanged. Cities
+without an open feed (most of the world, incl. India) get simulated
+incidents anchored to real named landmarks on the real road network.
 """
 from __future__ import annotations
 
 import json
 import math
+import random
 import time
 import urllib.parse
 import urllib.request
@@ -25,13 +28,27 @@ from dispatch_grid.models import IncidentType, TriageReport, Unit
 from dispatch_grid.routing import CityGraph
 from dispatch_grid.triage import TriageAgent
 
-CITY_FILE = Path(__file__).resolve().parent / "data" / "seattle_city.json"
+DATA_DIR = Path(__file__).resolve().parent / "data"
 SOCRATA_URL = "https://data.seattle.gov/resource/kzjm-xkqj.json"
 
+# city key -> has a live incident feed (only Seattle publishes one)
+LIVE_FEED_CITIES = {"seattle"}
 
-@lru_cache(maxsize=1)
-def load_city() -> dict:
-    return json.loads(CITY_FILE.read_text())
+
+def available_cities() -> list[dict]:
+    out = []
+    for f in sorted(DATA_DIR.glob("*_city.json")):
+        key = f.name.removesuffix("_city.json")
+        meta = json.loads(f.read_text())
+        out.append({"key": key, "city": meta.get("city", key.title()),
+                    "country": meta.get("country", ""),
+                    "live": key in LIVE_FEED_CITIES})
+    return out
+
+
+@lru_cache(maxsize=8)
+def load_city(key: str = "seattle") -> dict:
+    return json.loads((DATA_DIR / f"{key}_city.json").read_text())
 
 
 class RealCityGraph(CityGraph):
@@ -180,4 +197,58 @@ def build_reports(city: dict, duration: float, max_calls: int = 250) -> list[Tri
             confidence=0.95,  # CAD-verified: never quarantined
             received_at=(ts - t0) / span * duration * 0.96,
         ))
+    return reports
+
+
+# ------------------- simulated incidents on a real city -------------------
+
+_SCENARIO_TYPES = [
+    (IncidentType.MEDICAL, 0.40, 3), (IncidentType.FIRE, 0.20, 4),
+    (IncidentType.ACCIDENT, 0.22, 3), (IncidentType.HAZMAT, 0.06, 4),
+    (IncidentType.COLLAPSE, 0.05, 5), (IncidentType.FLOOD, 0.07, 3),
+]
+
+
+def build_scenario_reports(city: dict, duration: float, n_incidents: int,
+                           seed: int) -> list[TriageReport]:
+    """Simulated emergencies anchored to real landmarks on a real road
+    network — used for cities without an open live 911 feed. Incidents get
+    1-3 reports each (with location jitter and severity noise) so the
+    dedup/merge machinery is exercised like it would be with real calls."""
+    rng = random.Random(seed)
+    pois = city.get("pois") or []
+    node_ids = [int(n) for n in city["nodes"]]
+    types, weights, base_sevs = zip(*_SCENARIO_TYPES)
+    reports = []
+    seq = 0
+    for _ in range(n_incidents):
+        itype = rng.choices(types, weights)[0]
+        base_sev = dict(zip(types, base_sevs))[itype]
+        if pois and rng.random() < 0.75:
+            poi = rng.choice(pois)
+            node, loc = poi["node"], poi["name"]
+        else:
+            node = rng.choice(node_ids)
+            loc = None
+        t0 = rng.uniform(0, duration * 0.92)
+        sev0 = max(1, min(5, base_sev + rng.choice([-1, 0, 0, 1])))
+        people0 = {1: 1, 2: 1, 3: 2, 4: 8, 5: 20}[sev0]
+        for k in range(rng.choice([1, 1, 2, 2, 3])):
+            seq += 1
+            sev = max(1, min(5, sev0 + rng.choice([-1, 0, 0])))
+            people = max(1, int(people0 * rng.uniform(0.6, 1.6)))
+            reports.append(TriageReport(
+                call_id=f"SIM{seq:05d}",
+                location=loc,
+                node=node,
+                incident_type=itype,
+                severity=sev,
+                affected_people=people,
+                resources_needed=TriageAgent._scale_resources(itype, sev, people),
+                urgency=max(0.5, min(2.0, 1.0 + 0.15 * (sev - 3)
+                                     + rng.uniform(-0.1, 0.2))),
+                confidence=rng.uniform(0.6, 0.95),
+                received_at=min(duration, t0 + k * rng.uniform(20, 240)),
+            ))
+    reports.sort(key=lambda r: r.received_at)
     return reports

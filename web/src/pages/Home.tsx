@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { createRun, fetchRuns } from '../api'
-import type { RunMeta } from '../types'
+import { createRun, fetchCities, fetchRuns } from '../api'
+import type { CityInfo, RunMeta } from '../types'
 import Navbar from '../components/Navbar'
+
+const FLAGS: Record<string, string> = { US: '🇺🇸', IN: '🇮🇳' }
 
 const PIPELINE = [
   {
@@ -28,7 +30,9 @@ export default function Home() {
   const [starting, setStarting] = useState(false)
   const [demoStarting, setDemoStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [mode, setMode] = useState<'synthetic' | 'seattle'>('seattle')
+  const [cities, setCities] = useState<CityInfo[]>([])
+  const [cityKey, setCityKey] = useState('seattle')
+  const [useReal, setUseReal] = useState(true)
   const [durationMin, setDurationMin] = useState(60)
   const [incidents, setIncidents] = useState(320)
   const [seed, setSeed] = useState(42)
@@ -36,7 +40,15 @@ export default function Home() {
 
   useEffect(() => {
     fetchRuns().then(setRuns).catch(() => {})
+    fetchCities().then(cs => {
+      setCities(cs)
+      if (cs.length && !cs.some(c => c.key === 'seattle')) setCityKey(cs[0].key)
+    }).catch(() => {})
   }, [])
+
+  const selectedCity = cities.find(c => c.key === cityKey)
+  const mode = useReal ? cityKey : 'synthetic'
+  const showScenarioKnobs = !useReal || !selectedCity?.live
 
   async function start() {
     setStarting(true)
@@ -124,26 +136,43 @@ export default function Home() {
             <span className="text-xs text-slate-500">runs server-side · shareable replay</span>
           </div>
           <div className="mb-6 grid gap-3 sm:grid-cols-2">
-            <button onClick={() => setMode('seattle')}
-              className={`rounded-xl border p-4 text-left transition ${
-                mode === 'seattle'
+            <div onClick={() => setUseReal(true)}
+              className={`cursor-pointer rounded-xl border p-4 text-left transition ${
+                useReal
                   ? 'border-orange-500/70 bg-orange-500/10'
                   : 'border-slate-800 bg-slate-950/40 hover:border-slate-600'}`}>
               <div className="flex items-center gap-2 font-semibold text-white">
-                Seattle — real 911 calls
-                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold tracking-wide text-emerald-400">
-                  REAL DATA
-                </span>
+                Real city
+                {selectedCity?.live ? (
+                  <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold tracking-wide text-emerald-400">
+                    LIVE 911 DATA
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-bold tracking-wide text-sky-400">
+                    REAL MAP
+                  </span>
+                )}
               </div>
-              <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                Replays the latest real Seattle Fire Dept 911 calls on the real
-                road network (OpenStreetMap + data.seattle.gov), time-compressed
-                into your chosen window.
+              <select value={cityKey}
+                onClick={e => e.stopPropagation()}
+                onChange={e => { setCityKey(e.target.value); setUseReal(true) }}
+                className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm focus:border-orange-500 focus:outline-none">
+                {cities.map(c => (
+                  <option key={c.key} value={c.key}>
+                    {FLAGS[c.country] ?? ''} {c.city}
+                    {c.live ? ' — live 911 feed' : ' — real roads & landmarks'}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs leading-relaxed text-slate-400">
+                {selectedCity?.live
+                  ? 'Replays the latest real 911 calls on the real road network (OpenStreetMap + city open data), time-compressed into your window.'
+                  : 'Real road network, fire stations and landmarks from OpenStreetMap; emergencies are simulated at real locations (no public 911 feed exists here).'}
               </p>
-            </button>
-            <button onClick={() => setMode('synthetic')}
+            </div>
+            <button onClick={() => setUseReal(false)}
               className={`rounded-xl border p-4 text-left transition ${
-                mode === 'synthetic'
+                !useReal
                   ? 'border-orange-500/70 bg-orange-500/10'
                   : 'border-slate-800 bg-slate-950/40 hover:border-slate-600'}`}>
               <div className="font-semibold text-white">Synthetic disaster</div>
@@ -163,7 +192,7 @@ export default function Home() {
                 <span className="w-16 text-right font-mono text-sm">{durationMin}m</span>
               </div>
             </label>
-            {mode === 'synthetic' && (
+            {showScenarioKnobs && (
               <label className="block">
                 <span className="text-sm text-slate-400">Ground-truth incidents</span>
                 <div className="mt-1 flex items-center gap-3">
@@ -174,7 +203,7 @@ export default function Home() {
                 </div>
               </label>
             )}
-            {mode === 'synthetic' && (
+            {showScenarioKnobs && (
               <label className="block">
                 <span className="text-sm text-slate-400">Random seed</span>
                 <input type="number" value={seed} min={0}
@@ -241,8 +270,8 @@ export default function Home() {
                     </span>
                   </div>
                   <div className="mt-2 text-sm text-slate-400">
-                    {r.params.mode === 'seattle'
-                      ? <>Seattle · real 911 calls · {Math.round(r.params.duration / 60)} min</>
+                    {r.params.mode && r.params.mode !== 'synthetic'
+                      ? <>{r.params.mode[0].toUpperCase() + r.params.mode.slice(1)} · real city · {Math.round(r.params.duration / 60)} min</>
                       : <>{Math.round(r.params.duration / 60)} min · {r.params.incidents} incidents
                           · seed {r.params.seed}</>}
                   </div>

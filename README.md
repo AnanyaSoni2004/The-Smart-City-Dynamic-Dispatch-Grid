@@ -8,6 +8,20 @@ The web app runs the real Python engine server-side and streams every tick to th
 browser over WebSocket. Completed runs are saved to SQLite and get a permanent
 shareable URL (`/runs/<id>`).
 
+Three kinds of scenario, selectable on the home page:
+
+- **Seattle 🇺🇸 — live 911 data**: replays the latest real Seattle Fire Dept
+  calls (data.seattle.gov) on the real road network from OpenStreetMap.
+- **Delhi / Mumbai 🇮🇳 — real city map**: real roads, real fire stations, and
+  real landmark names from OpenStreetMap; emergencies are simulated at real
+  locations (India publishes no open live 112/911 feed).
+- **Synthetic grid city**: 1,000+ generated noisy transcripts exercising the
+  full text-triage pipeline.
+
+Add any city on Earth with one command — add a bounding box to
+`scripts/build_city.py` and run `python3 scripts/build_city.py <cityname>`;
+the new city appears in the picker automatically.
+
 ```
 pip install -r requirements.txt
 cd web && npm install && npm run build && cd ..

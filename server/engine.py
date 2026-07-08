@@ -21,7 +21,7 @@ from . import realmode
 
 DRAIN_SECONDS = 1800.0  # keep ticking after the last call, like run()
 
-SEATTLE_FLEET = {
+REAL_CITY_FLEET = {
     UnitType.AMBULANCE: 30,
     UnitType.FIRE_TRUCK: 30,
     UnitType.POLICE: 25,
@@ -44,25 +44,32 @@ class SimulationSession:
         self.reports = []
         self.disruptions: list[tuple[float, str, int, int]] = []
 
-        if mode == "seattle":
-            city = realmode.load_city()
+        if mode != "synthetic":
+            city = realmode.load_city(mode)
             self.city_name = city["city"]
+            self.city_pois = {p["name"]: p["node"]
+                              for p in city.get("pois", [])}
             self.graph = realmode.RealCityGraph(city)
             self.bus = EventBus()
             dispatch = realmode.RegionalDispatchAgent(
-                self.graph, SEATTLE_FLEET,
+                self.graph, REAL_CITY_FLEET,
                 [s["node"] for s in city["stations"]])
             self.coord = SwarmCoordinator(
                 [TriageAgent(f"triage-{i}") for i in range(4)],
                 dispatch, self.bus)
-            # keep demand roughly matched to the fleet: ~200 real calls
-            # per simulated hour, since real spacing gets compressed
-            max_calls = int(min(250, max(60, duration / 3600 * 200)))
-            self.reports = realmode.build_reports(city, duration, max_calls)
-            if not self.reports:
-                raise RuntimeError("no live 911 records available")
+            if mode in realmode.LIVE_FEED_CITIES:
+                # keep demand roughly matched to the fleet: ~200 real calls
+                # per simulated hour, since real spacing gets compressed
+                max_calls = int(min(250, max(60, duration / 3600 * 200)))
+                self.reports = realmode.build_reports(city, duration, max_calls)
+                if not self.reports:
+                    raise RuntimeError("no live 911 records available")
+            else:
+                self.reports = realmode.build_scenario_reports(
+                    city, duration, n_incidents, seed)
         else:
             self.city_name = None
+            self.city_pois = {}
             self.graph, self.bus, self.coord = build_system()
             gen = CallGenerator(n_incidents=n_incidents, duration=duration,
                                 seed=seed)
@@ -106,7 +113,7 @@ class SimulationSession:
                     seen.add(k)
                     edges.append([k[0], k[1]])
         stations = sorted({u.home_node for u in self.coord.dispatch.units.values()})
-        landmarks = ({} if self.mode == "seattle"
+        landmarks = (self.city_pois if self.mode != "synthetic"
                      else {name: d["node"] for name, d in LANDMARKS.items()})
         return {
             "city": self.city_name,

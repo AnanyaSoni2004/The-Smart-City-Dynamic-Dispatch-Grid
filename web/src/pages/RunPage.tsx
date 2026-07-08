@@ -177,8 +177,10 @@ export default function RunPage() {
         )}
         {params && (
           <div className="flex flex-wrap gap-1.5 text-xs">
-            {(params.mode === 'seattle'
-              ? ['Seattle — real 911 calls', `${Math.round(params.duration / 60)} min`]
+            {(params.mode && params.mode !== 'synthetic'
+              ? [`${graph?.city ?? params.mode} — ${params.mode === 'seattle'
+                    ? 'real 911 calls' : 'real city map'}`,
+                 `${Math.round(params.duration / 60)} min`]
               : [`${Math.round(params.duration / 60)} min`,
                  `${params.incidents} incidents`,
                  `seed ${params.seed}`]).map(chip => (

@@ -1,4 +1,10 @@
-import type { RunDetail, RunMeta, RunParams } from './types'
+import type { CityInfo, RunDetail, RunMeta, RunParams } from './types'
+
+export async function fetchCities(): Promise<CityInfo[]> {
+  const res = await fetch('/api/cities')
+  if (!res.ok) throw new Error('failed to list cities')
+  return res.json()
+}
 
 export async function createRun(params: Partial<RunParams>): Promise<{ id: string }> {
   const res = await fetch('/api/runs', {

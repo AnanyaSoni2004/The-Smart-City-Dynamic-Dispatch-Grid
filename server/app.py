@@ -25,7 +25,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import db
+from . import db, realmode
 from .engine import SimulationSession
 
 app = FastAPI(title="Dispatch Grid")
@@ -40,7 +40,8 @@ class RunParams(BaseModel):
     seed: int = Field(42, ge=0, le=10_000_000)
     tick: float = Field(10.0, ge=5, le=60)
     speed: float = Field(120.0, ge=10, le=600)         # sim-seconds per real second
-    mode: str = Field("synthetic", pattern="^(synthetic|seattle)$")
+    # "synthetic" (generated grid city) or a real-city key from /api/cities
+    mode: str = Field("synthetic", pattern="^[a-z_]{1,24}$")
 
 
 @dataclass
@@ -91,16 +92,19 @@ async def create_run(params: RunParams) -> dict:
         raise HTTPException(
             429, "All simulation slots are busy right now — watch a recent "
                  "run or try again in a minute.")
+    known = {c["key"] for c in realmode.available_cities()} | {"synthetic"}
+    if params.mode not in known:
+        raise HTTPException(422, f"unknown city '{params.mode}'")
     run_id = secrets.token_hex(4)
     try:
         session = await asyncio.to_thread(
             SimulationSession, params.duration, params.tick,
             params.seed, params.incidents, params.mode)
     except Exception:
-        if params.mode == "seattle":
+        if params.mode in realmode.LIVE_FEED_CITIES:
             raise HTTPException(
-                502, "Couldn't fetch live Seattle 911 data right now — "
-                     "try again in a minute, or run a synthetic disaster.")
+                502, "Couldn't fetch the live 911 feed right now — "
+                     "try again in a minute, or pick another city.")
         raise
     run = ActiveRun(id=run_id, params=params, session=session,
                     graph=session.static_payload(),
@@ -171,6 +175,11 @@ async def run_stream(ws: WebSocket, run_id: str) -> None:
     finally:
         if q in run.subscribers:
             run.subscribers.remove(q)
+
+
+@app.get("/api/cities")
+async def cities() -> list[dict]:
+    return realmode.available_cities()
 
 
 @app.get("/api/stats")

@@ -68,7 +68,14 @@ export interface RunParams {
   seed: number
   tick: number
   speed: number
-  mode?: 'synthetic' | 'seattle'
+  mode?: string
+}
+
+export interface CityInfo {
+  key: string
+  city: string
+  country: string
+  live: boolean
 }
 
 export interface RunMeta {
