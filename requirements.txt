@@ -1,3 +1,6 @@
 fastapi>=0.110
 uvicorn[standard]>=0.29
 pydantic>=2.5
+# optional: LLM-triage observability. Tracing no-ops if this is absent or the
+# LANGFUSE_* keys are unset, so it is safe to leave installed.
+langfuse>=3

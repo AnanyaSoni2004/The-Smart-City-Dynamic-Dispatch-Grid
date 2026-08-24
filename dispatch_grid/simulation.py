@@ -17,7 +17,7 @@ from .routing import CityGraph
 from .triage import TriageAgent
 
 
-def build_system(seed: int = 7):
+def build_system(seed: int = 7, triage_swarm=None):
     graph = CityGraph(seed=seed)
     fleet = {
         UnitType.AMBULANCE: 20,
@@ -28,7 +28,10 @@ def build_system(seed: int = 7):
     }
     stations = [0, 11, 60, 71, 132, 143, 66, 27]  # spread across regions
     bus = EventBus()
-    triage_swarm = [TriageAgent(f"triage-{i}") for i in range(4)]
+    # default to the deterministic rule-based swarm; callers may inject an
+    # LLM-backed swarm (e.g. for Langfuse-traced runs) instead.
+    if triage_swarm is None:
+        triage_swarm = [TriageAgent(f"triage-{i}") for i in range(4)]
     dispatch = DispatchAgent(graph, fleet, stations)
     coord = SwarmCoordinator(triage_swarm, dispatch, bus)
     return graph, bus, coord

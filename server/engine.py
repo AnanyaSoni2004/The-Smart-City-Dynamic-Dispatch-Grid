@@ -8,6 +8,7 @@ the frontend can animate units between intersections.
 """
 from __future__ import annotations
 
+import os
 import random
 from typing import Optional
 
@@ -20,6 +21,18 @@ from dispatch_grid.triage import TriageAgent
 from . import realmode
 
 DRAIN_SECONDS = 1800.0  # keep ticking after the last call, like run()
+
+
+def _make_triage_swarm(n: int = 4):
+    """Rule-based swarm by default. When USE_LLM_TRIAGE is truthy, use the
+    LLM-backed swarm so runs are traced in Langfuse. The coordinator triages
+    one call at a time, so on a free LLM tier this WILL hit rate limits on a
+    busy run — but LLMTriageAgent falls back to rules per-call on any API
+    error, so dispatch never stalls; the calls that do succeed get traced."""
+    if os.environ.get("USE_LLM_TRIAGE", "").lower() in ("1", "true", "yes"):
+        from dispatch_grid.llm_triage import LLMTriageAgent
+        return [LLMTriageAgent(f"triage-{i}") for i in range(n)]
+    return [TriageAgent(f"triage-{i}") for i in range(n)]
 
 REAL_CITY_FLEET = {
     UnitType.AMBULANCE: 30,
@@ -70,7 +83,8 @@ class SimulationSession:
         else:
             self.city_name = None
             self.city_pois = {}
-            self.graph, self.bus, self.coord = build_system()
+            self.graph, self.bus, self.coord = build_system(
+                triage_swarm=_make_triage_swarm())
             gen = CallGenerator(n_incidents=n_incidents, duration=duration,
                                 seed=seed)
             self.calls = gen.generate()

@@ -19,11 +19,19 @@ Design points:
   * Location grounding: the model maps free-text locations onto the city
     gazetteer (the only locations the router can act on); ungrounded
     locations come back null rather than hallucinated.
+  * Observability (optional): if `langfuse` is installed and LANGFUSE_PUBLIC_KEY
+    / LANGFUSE_SECRET_KEY are set, every batch LLM call is traced as a Langfuse
+    generation (prompt, completion, model, token usage, latency, errors). If the
+    package or keys are absent it degrades to a no-op — tracing never breaks
+    extraction, matching the fallback philosophy above.
 
 Requires: ANTHROPIC_API_KEY in the environment. Uses stdlib urllib only.
+Optional: pip install langfuse + LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY
+(and LANGFUSE_HOST for self-hosted) to enable tracing.
 """
 from __future__ import annotations
 
+import atexit
 import json
 import os
 import time
@@ -34,8 +42,17 @@ from .callgen import LANDMARKS
 from .models import EmergencyCall, IncidentType, TriageReport, UnitType
 from .triage import TriageAgent
 
-API_URL = "https://api.anthropic.com/v1/messages"
-MODEL = os.environ.get("TRIAGE_MODEL", "claude-sonnet-4-20250514")
+# Provider is pluggable: "anthropic" (default) or "gemini". Both implement the
+# same batched-JSON contract; only the request shape and auth differ.
+PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic").lower()
+
+ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+ANTHROPIC_MODEL = os.environ.get("TRIAGE_MODEL", "claude-sonnet-4-20250514")
+
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
+
+MODEL = GEMINI_MODEL if PROVIDER == "gemini" else ANTHROPIC_MODEL
 
 _TYPES = [t.value for t in IncidentType if t != IncidentType.UNKNOWN]
 _UNITS = [u.value for u in UnitType]
@@ -57,6 +74,29 @@ panicked, misspelled and incomplete. For EACH transcript, extract:
 
 Respond ONLY with a JSON array, one object per transcript, in input order, each with key
 "id" echoing the transcript id plus the fields above. No markdown, no prose."""
+
+
+# ---------------- optional Langfuse tracing ----------------
+# Fully optional. _langfuse() returns a cached client only when the `langfuse`
+# package is importable AND both keys are set; otherwise None, and every trace
+# call site becomes a no-op so the extractor behaves exactly as before.
+_LF_UNSET = object()
+_lf_client = _LF_UNSET
+
+
+def _langfuse():
+    global _lf_client
+    if _lf_client is _LF_UNSET:
+        _lf_client = None
+        if os.environ.get("LANGFUSE_PUBLIC_KEY") and os.environ.get("LANGFUSE_SECRET_KEY"):
+            try:
+                from langfuse import Langfuse
+                client = Langfuse()            # reads LANGFUSE_* from the env
+                atexit.register(client.flush)  # short-lived CLI runs must flush
+                _lf_client = client
+            except Exception:
+                _lf_client = None              # never let tracing break triage
+    return _lf_client
 
 
 class LLMTriageAgent(TriageAgent):
@@ -95,33 +135,118 @@ class LLMTriageAgent(TriageAgent):
 
     # ---------------- API plumbing ----------------
     def _call_llm(self, chunk: list[EmergencyCall]):
-        key = os.environ.get("ANTHROPIC_API_KEY")
+        key = self._api_key()
         if not key:
             return None
-        payload = {
-            "model": MODEL, "max_tokens": 220 * len(chunk),
-            "system": SYSTEM_PROMPT,
-            "messages": [{"role": "user", "content": json.dumps(
-                [{"id": c.call_id, "transcript": c.transcript} for c in chunk])}],
-        }
-        req = urllib.request.Request(
-            API_URL, data=json.dumps(payload).encode(),
-            headers={"Content-Type": "application/json", "x-api-key": key,
-                     "anthropic-version": "2023-06-01"})
+        user_content = json.dumps(
+            [{"id": c.call_id, "transcript": c.transcript} for c in chunk])
+        max_tokens = self._max_tokens(len(chunk))
+        req = self._build_request(key, user_content, max_tokens)
+
+        gen = self._start_trace(user_content, max_tokens, len(chunk))
+        rows = usage = error = None
         for attempt in range(self.max_retries):
             try:
                 self.stats["api_calls"] += 1
                 with urllib.request.urlopen(req, timeout=60) as r:
                     data = json.loads(r.read())
-                text = "".join(b.get("text", "") for b in data.get("content", []))
-                text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```")
-                rows = json.loads(text)
-                if isinstance(rows, list) and len(rows) == len(chunk):
-                    return rows
-                return None
-            except (urllib.error.URLError, json.JSONDecodeError, KeyError, TimeoutError):
+                rows, usage, error = self._parse_response(data, len(chunk))
+                break                             # got a response: don't retry
+            except (urllib.error.URLError, json.JSONDecodeError, KeyError, TimeoutError) as e:
+                error = f"{type(e).__name__}: {e}"
                 time.sleep(1.5 * (attempt + 1))   # backoff on transient failures
-        return None
+        self._end_trace(gen, rows, usage, error)
+        return rows
+
+    @staticmethod
+    def _api_key() -> str | None:
+        if PROVIDER == "gemini":
+            return os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        return os.environ.get("ANTHROPIC_API_KEY")
+
+    @staticmethod
+    def _max_tokens(n: int) -> int:
+        # Gemini flash "thinks" before answering and thinking spends output
+        # tokens, so give it generous headroom or the JSON gets truncated.
+        return (1000 + 600 * n) if PROVIDER == "gemini" else 220 * n
+
+    def _build_request(self, key, user_content, max_tokens):
+        if PROVIDER == "gemini":
+            body = {
+                "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+                "contents": [{"role": "user", "parts": [{"text": user_content}]}],
+                "generationConfig": {"maxOutputTokens": max_tokens,
+                                     "responseMimeType": "application/json",
+                                     "temperature": 0.0},
+            }
+            return urllib.request.Request(
+                GEMINI_URL.format(model=GEMINI_MODEL), data=json.dumps(body).encode(),
+                headers={"Content-Type": "application/json", "x-goog-api-key": key})
+        body = {
+            "model": ANTHROPIC_MODEL, "max_tokens": max_tokens,
+            "system": SYSTEM_PROMPT,
+            "messages": [{"role": "user", "content": user_content}],
+        }
+        return urllib.request.Request(
+            ANTHROPIC_URL, data=json.dumps(body).encode(),
+            headers={"Content-Type": "application/json", "x-api-key": key,
+                     "anthropic-version": "2023-06-01"})
+
+    def _parse_response(self, data: dict, n: int):
+        """-> (rows|None, usage_dict|None, error|None). rows is None on any
+        malformed/blocked response; usage is captured when present for tracing."""
+        try:
+            if PROVIDER == "gemini":
+                cand = data.get("candidates") or []
+                if not cand:
+                    return None, None, f"no candidates: {data.get('promptFeedback') or data}"
+                text = "".join(p.get("text", "")
+                               for p in cand[0].get("content", {}).get("parts", []))
+                um = data.get("usageMetadata") or {}
+                usage = {"input": um.get("promptTokenCount", 0),
+                         "output": um.get("candidatesTokenCount", 0)
+                         + um.get("thoughtsTokenCount", 0)}
+            else:
+                text = "".join(b.get("text", "") for b in data.get("content", []))
+                um = data.get("usage") or {}
+                usage = {"input": um.get("input_tokens", 0),
+                         "output": um.get("output_tokens", 0)}
+            text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```")
+            parsed = json.loads(text)
+            if isinstance(parsed, list) and len(parsed) == n:
+                return parsed, usage, None
+            got = len(parsed) if isinstance(parsed, list) else "non-list"
+            return None, usage, f"row count mismatch: got {got}, want {n}"
+        except (json.JSONDecodeError, KeyError, TypeError, IndexError) as e:
+            return None, None, f"parse error: {type(e).__name__}: {e}"
+
+    def _start_trace(self, user_content, max_tokens, n):
+        lf = _langfuse()
+        if lf is None:
+            return None
+        try:
+            return lf.start_observation(
+                name="triage-extract", as_type="generation", model=MODEL,
+                input={"system": SYSTEM_PROMPT, "user": user_content},
+                model_parameters={"max_tokens": max_tokens, "provider": PROVIDER},
+                metadata={"agent_id": self.agent_id, "batch_size": n})
+        except Exception:
+            return None
+
+    def _end_trace(self, gen, rows, usage, error):
+        if gen is None:
+            return
+        try:
+            usage_details = None
+            if usage:
+                usage_details = {"input": usage.get("input_tokens", 0),
+                                 "output": usage.get("output_tokens", 0)}
+            gen.update(output=rows, usage_details=usage_details,
+                       level="DEFAULT" if rows is not None else "ERROR",
+                       status_message=error)
+            gen.end()
+        except Exception:
+            pass                                  # tracing failures never propagate
 
     # ---------------- validation / clamping ----------------
     def _to_report(self, call: EmergencyCall, row: dict) -> TriageReport | None:
